@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 from collections import namedtuple
-from glob import glob, iglob
+from glob import iglob
 
 import logging
 import logging.handlers
@@ -29,15 +29,60 @@ LOG_FILE = '/orrcmonitor'
 
 EXITING = False
 
+KeyTup = namedtuple('KeyTup', 'ac, ar, ccs, hldrcs, \
+                               city, r, rcs, rx, scs, tx')
+
+
+def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
+    result: List[str] = []
+    headers: Set[str] = set()
+    for d in arg:
+        ks = set(d.keys())
+        headers.update(ks)
+
+    aa: List[str] = list(headers)
+    aa.sort()
+    keys: KeyTup = KeyTup._make(aa)
+    keyseq: KeyTup = [
+        keys.rcs,
+        keys.hldrcs,
+        keys.ccs,
+        keys.scs,
+        keys.tx,
+        keys.rx,
+        keys.city,
+        keys.r,
+        keys.ar,
+        keys.ac,
+    ]
+    result.append('Information\n')
+
+    result.append('\t'.join(keyseq) + '\n')
+    for d in arg:
+        myvals: List[str] = []
+        for k in keyseq:
+            myvals.append(d.get(k))
+        lna = '\t'.join(myvals)
+        #ln = f'{lna}\n'
+        result.append(f'{lna}\n')
+
+    return result
+
 
 class PsudoMain:
     """
-    (<td.+?>.+?</td>)
-    (<td.+?data-name=["](.+?)["]>([0-9A-Za-z._]+?)</td>)
+
     """
 
+    def _genoutPath(self):
+        parent = self.fdfin.parent
+        stem = f'{self.fdfin.stem}.tab'
+        self.fdfout = parent / stem
+
     def __init__(self):
-        pass
+        self.fdfin: Path = Path('.')
+        self.fdfout: Path = Path('.')
+        self.pl = ProcessLine()
 
     def __str__(self) -> str:
         return 'not implemented'
@@ -46,19 +91,27 @@ class PsudoMain:
         return 'not implemented'
 
     def doit(self, arg, *args, **kwargs) -> List[Dict[str, str]]:
-        fdf: Path = FindDataFile(arg).doit()
-        pl = ProcessLine()
+        self.fdfin = FindDataFile(arg).doit()
+
         dic_result: List[Dict[str, str]] = []
         try:
-            with open(fdf, 'r') as df:
+            with open(self.fdfin, 'r') as df:
                 line: str = df.readline()
                 while line:
-                    dic_result.append(pl.doit(line))
+                    dic_result.append(self.pl.doit(line))
                     line = df.readline()
 
         except Exception as ex:
             raise
         result = process_dic_result(dic_result)
+        self._genoutPath()
+        try:
+            with open(self.fdfout, 'w') as df:
+                for ln in result:
+                    df.write(ln)
+
+        except Exception as ex:
+            raise
         return result
 
 
@@ -76,13 +129,13 @@ class ProcessLine:
         return '%s(%r)' % (self.__class__, self.__dict__)
 
     def doit(self, line: str) -> Dict[str, str]:
-        tds: List[str] = re.findall('(<td.+?>.+?</td>)', line)
+        tds: List[str] = re.findall('(<td.+?>.*?</td>)', line)
         info: Dict[str, str] = {}
         for td in tds:
             stuff = re.findall(
-                '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]+?)</td>', td)
-            assert 1 == len(stuff)
-            info[stuff[0][0]] = stuff[0][1]
+                '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]*?)</td>', td)
+            #assert 1 == len(stuff)
+            info[stuff[0][0]] = stuff[0][1]  # if stuff[0][1] is empty
 
         a = 0
         return info
@@ -112,11 +165,11 @@ class FindDataFile:
         # result = (chain.from_iterable(
         # glob(os.path.join(x[0], FILE_NAME)) for x in os.walk('.')))
 
-        result: Path = None
-        for result in iglob(f'{self.dirpath}/**/{self.sfn}', recursive=True):
-            a = 0
+        _r: str = ''
+        for _r in iglob(f'{self.dirpath}/**/{self.sfn}', recursive=True):
             break
-        return result
+
+        return Path(_r)
 
 
 def main():
