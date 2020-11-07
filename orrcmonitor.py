@@ -55,6 +55,7 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         keys.ar,
         keys.ac,
     ]
+
     result.append('Information\n')
 
     result.append('\t'.join(keyseq) + '\n')
