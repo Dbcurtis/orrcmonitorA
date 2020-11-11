@@ -2,9 +2,8 @@
 import sys
 import os
 
-
 # from typing import Any, Union, Tuple, Callable, TypeVar, Generic, Sequence, Mapping, List, Dict, Set, Deque
-from typing import Any, Tuple, List, Dict, Set, Callable, Deque
+from typing import Any, Tuple, List, Dict, Set
 
 from pathlib import Path
 import re
@@ -16,11 +15,11 @@ import logging
 import logging.handlers
 
 
-from time import sleep as Sleep
-from time import monotonic
+#from time import sleep as Sleep
+#from time import monotonic
 from datetime import datetime as Dtc
-from datetime import timezone
-from collections import deque, namedtuple
+#from datetime import timezone
+#from collections import deque, namedtuple
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,14 +34,18 @@ KeyTup = namedtuple('KeyTup', 'ac, ar, ccs, hldrcs, \
 
 def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
     result: List[str] = []
-    headers: Set[str] = set()
-    for d in arg:
-        ks = set(d.keys())
-        headers.update(ks)
 
-    aa: List[str] = list(headers)
-    aa.sort()
-    keys: KeyTup = KeyTup._make(aa)
+    def _setup_keys() -> List[str]:
+        _headers: Set[str] = set()
+        for _ in arg:
+            _ks = set(_.keys())
+            _headers.update(_ks)
+
+        _header_lst: List[str] = list(_headers)
+        _header_lst.sort()
+        return _header_lst
+
+    keys: KeyTup = KeyTup._make(_setup_keys())
     keyseq: KeyTup = [
         keys.rcs,
         keys.hldrcs,
@@ -56,16 +59,25 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         keys.ac,
     ]
 
-    result.append('Information\n')
+    result.append('Information\n')  # title
+    result.append('\t'.join(keyseq) + '\n')  # column titles
+    for _ in arg:
+        myvals: List[str] = [_.get(_k) for _k in keyseq]
+        _lna = '\t'.join(myvals)
+        result.append(f'{_lna}\n')
+    return result
 
-    result.append('\t'.join(keyseq) + '\n')
-    for d in arg:
-        myvals: List[str] = []
-        for k in keyseq:
-            myvals.append(d.get(k))
-        lna = '\t'.join(myvals)
-        #ln = f'{lna}\n'
-        result.append(f'{lna}\n')
+
+def process_line(line: str) -> Dict[str, str]:
+    """process_line(line: str) -> Dict[str, str]:
+
+    """
+    _tds: List[str] = re.findall('(<td.+?>.*?</td>)', line)
+    result: Dict[str, str] = {}
+    for _ in _tds:
+        stuff = re.findall(
+            '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]*?)</td>', _)
+        result[stuff[0][0]] = stuff[0][1]
 
     return result
 
@@ -83,7 +95,6 @@ class PsudoMain:
     def __init__(self):
         self.fdfin: Path = Path('.')
         self.fdfout: Path = Path('.')
-        self.pl = ProcessLine()
 
     def __str__(self) -> str:
         return 'not implemented'
@@ -99,11 +110,11 @@ class PsudoMain:
             with open(self.fdfin, 'r') as df:
                 line: str = df.readline()
                 while line:
-                    dic_result.append(self.pl.doit(line))
+                    dic_result.append(process_line(line))
                     line = df.readline()
 
-        except Exception as ex:
-            raise
+        except Exception as _:
+            raise _
         result = process_dic_result(dic_result)
         self._genoutPath()
         try:
@@ -111,35 +122,9 @@ class PsudoMain:
                 for ln in result:
                     df.write(ln)
 
-        except Exception as ex:
-            raise
+        except Exception as _:
+            raise _
         return result
-
-
-class ProcessLine:
-    """
-    """
-
-    def __init__(self):
-        pass
-
-    def __str__(self) -> str:
-        return 'not implemented'
-
-    def __repr__(self) -> str:
-        return '%s(%r)' % (self.__class__, self.__dict__)
-
-    def doit(self, line: str) -> Dict[str, str]:
-        tds: List[str] = re.findall('(<td.+?>.*?</td>)', line)
-        info: Dict[str, str] = {}
-        for td in tds:
-            stuff = re.findall(
-                '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]*?)</td>', td)
-            #assert 1 == len(stuff)
-            info[stuff[0][0]] = stuff[0][1]  # if stuff[0][1] is empty
-
-        a = 0
-        return info
 
 
 class FindDataFile:
