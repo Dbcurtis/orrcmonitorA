@@ -132,12 +132,22 @@ class FindDataFile:
     """
 
     def __init__(self, arg: Path, sfn='k7rvmraw.txt'):
+        """Instantiates FindDataFile class
+
+        Args:
+            arg (Path): [description]
+            sfn (str, optional): [filename and extension you are trying to find]. Defaults to 'k7rvmraw.txt'.
+
+        Raises:
+            TypeError: [If the arg is not a path]
+            TypeError: [If the path does not exist or if it is not a directory]
+        """
         if not isinstance(arg, Path):
             raise TypeError(f'{arg} must be a Path')
         self.dirpath: Path = arg
 
         if not (self.dirpath.exists() and self.dirpath.is_dir()):
-            raise TypeError(f'{dirpath} must be a directory')
+            raise TypeError(f'{self.dirpath} must be a directory')
 
         self.sfn: str = sfn
 
@@ -171,29 +181,7 @@ def main():
 
 
 def test1():
-    """FindDataFile_instat
-
-    Test FindDataFile instantiation
-
-    """
-    try:
-        _fdf = FindDataFile('junk')
-        #self.fail('took string as path')
-        a = 0
-    except:
-        pass
-    try:
-        _fdf = FindDataFile(Path.home() / 'gobblygook')
-        #self.fail('took junk path as directory')
-        a = 0
-    except:
-        pass
-    print(Path.cwd())
-    try:
-        _fdf = FindDataFile(Path.cwd())
-        pass
-    except:
-        a = 0
+    pass
 
 
 def test2():
@@ -203,7 +191,7 @@ def test2():
 
     """
     _fdf = FindDataFile(Path.cwd())
-    estr: str = 'searching for k7rvmraw.txt under m:\Python\Python3_packages\orrcmonitor'
+    estr: str = r'searching for k7rvmraw.txt under m:\Python\Python3_packages\orrcmonitor'
     erepr: str = "<class '__main__.FindDataFile'>({'dirpath': WindowsPath('m:/Python/Python3_packages/orrcmonitor'), 'sfn': 'k7rvmraw.txt'})"
     assert estr == str(_fdf)
     assert erepr == repr(_fdf)
@@ -223,17 +211,21 @@ def test3():
     assert len(lines) == 6
 
     a = 0
-    pl = ProcessLine()
-    stuff = pl.doit(lines[0])
+
+    stuff = process_line(lines[0])
     estuff = "{'TxFreq': '145.2400', 'RxFreq': '144.6400', 'NearestCity': 'Medford', 'RepeaterCallSign': 'KG7FOJ', 'CoordinationHolder': 'K7RVM', 'Contact': 'N6WN', 'Sponsor': 'K7RVM', 'Region': '5', 'ARRL_Region': 'South West Oregon', 'ARRL_Code': 'oe'}"
     assert str(stuff) == estuff
 
     result: List[Dict[str, str]] = []
 
     for l in lines:
-        stuff = pl.doit(l)
+        stuff = process_line(l)
         result.append(stuff)
     assert len(lines) == len(result)
+
+
+def dataval1():
+    pass
 
 
 if __name__ == '__main__':
@@ -280,13 +272,13 @@ if __name__ == '__main__':
         else:
             raise Exception("wrong val")
 
-    except(Exception, KeyboardInterrupt) as exc:
-        print(exc)
-        sys.exit(str(exc))
-
     except SystemError as se:
         print(se)
         sys.exit(str(se))
+
+    except(Exception, KeyboardInterrupt) as exc:
+        print(exc)
+        sys.exit(str(exc))
 
     finally:
         sys.exit('normal exit')

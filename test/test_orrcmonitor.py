@@ -3,10 +3,11 @@
 Test file for need
 """
 
-
+from typing import Any, Tuple, List, Dict, Set
 import unittest
+import context
 import orrcmonitor
-from orrcmonitor import ProcessLine, FindDataFile, PsudoMain, main
+from orrcmonitor import  FindDataFile, PsudoMain, main, process_line
 from pathlib import Path
 #import context
 
@@ -42,6 +43,7 @@ class TestOrrcMonitor(unittest.TestCase):
         """
         pass
 
+
     def test0001_FindDataFile_instat(self):
         """FindDataFile_instat
 
@@ -64,6 +66,7 @@ class TestOrrcMonitor(unittest.TestCase):
             pass
         except:
             self.fail('rejected a directory')
+        a=0
 
     def test0002_FindDataFile_instat(self):
         """FindDataFile_instat
@@ -76,8 +79,9 @@ class TestOrrcMonitor(unittest.TestCase):
         erepr: str = repr(_fdf)  # ''
         self.assertEqual(estr, str(_fdf))
         self.assertEqual(erepr, repr(_fdf))
+        a=0
 
-    def test0003_FindDataFile_instat(self):
+    def test0003_FindDataFile_instat(self):    
         """FindDataFile_instat
 
         Test FindDataFile strings
@@ -85,7 +89,30 @@ class TestOrrcMonitor(unittest.TestCase):
         """
         _fdf = FindDataFile(Path.cwd())
         pth2file: Path = _fdf.doit()
+        lines: List[str]
+        with open(pth2file, 'r') as fl:
+            lines = fl.readlines()
+        assert len(lines) == 6
+
         a = 0
+
+        stuff = process_line(lines[0])
+        estuff = "{'TxFreq': '145.2400', 'RxFreq': '144.6400', 'NearestCity': 'Medford', 'RepeaterCallSign': 'KG7FOJ', 'CoordinationHolder': 'K7RVM', 'Contact': 'N6WN', 'Sponsor': 'K7RVM', 'Region': '5', 'ARRL_Region': 'South West Oregon', 'ARRL_Code': 'oe'}"
+        assert str(stuff) == estuff
+
+        result: List[Dict[str, str]] = []
+
+        for l in lines:
+            stuff = process_line(l)
+            result.append(stuff)
+        assert len(lines) == len(result)
+        a=0
+        """FindDataFile_instat
+
+        Test FindDataFile strings
+
+        """
+
 
 
 if __name__ == '__main__':
