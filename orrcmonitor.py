@@ -1,41 +1,69 @@
 #!/usr/bin/env python3
+"""[summary]
+
+    Raises:
+        _: [description]
+        _: [description]
+        TypeError: [description]
+        TypeError: [description]
+        ex: [description]
+        Exception: [description]
+
+    Returns:
+        [type]: [description]
+    """
 import sys
 import os
-
 # from typing import Any, Union, Tuple, Callable, TypeVar, Generic, Sequence, Mapping, List, Dict, Set, Deque
 from typing import Any, Tuple, List, Dict, Set
-
 from pathlib import Path
 import re
-
 from collections import namedtuple
 from glob import iglob
-
 import logging
 import logging.handlers
-
-
-#from time import sleep as Sleep
-#from time import monotonic
 from datetime import datetime as Dtc
-#from datetime import timezone
-#from collections import deque, namedtuple
 
 LOGGER = logging.getLogger(__name__)
-
 LOG_DIR = os.path.dirname(os.path.abspath(__file__)) + '/logs'
 LOG_FILE = '/orrcmonitor'
 
 EXITING = False
 
 KeyTup = namedtuple('KeyTup', 'ac, ar, ccs, hldrcs, \
-                               city, r, rcs, rx, scs, tx')
+                    city, r, rcs, rx, scs, tx')
+"""
+    Each record in the extracted file has the following format and the KeyTup value:
+    tx:     <td class="grid-cell Center" data-name="TxFreq">444.4500</td>  
+    rx:     <td class="grid-cell Center" data-name="RxFreq">449.4500</td>
+    city:   <td class="grid-cell"        data-name="NearestCity">Medford</td>
+    rcs:    <td class="grid-cell Center" data-name="RepeaterCallSign">K7RVM</td>
+    hldrcs: <td class="grid-cell Center" data-name="CoordinationHolder">K7RVM</td>
+    ccs:    <td class="grid-cell Center" data-name="Contact">N6WN</td>
+    scs:    <td class="grid-cell Center" data-name="Sponsor">K7RVM</td>
+    r:      <td class="grid-cell Center" data-name="Region">5</td>
+    ar:     <td class="grid-cell Center" data-name="ARRL_Region">South West Oregon</td>
+    ac:     <td class="grid-cell"        data-name="ARRL_Code">oset(100.0)</td>    </tr>
+"""
 
 
 def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
+    """[summary]
+
+    Args:
+        arg (List[Dict[str, str]]): [description]
+
+    Returns:
+        List[str]: [description]
+    """
     result: List[str] = []
 
     def _setup_keys() -> List[str]:
+        """[summary]
+
+        Returns:
+            List[str]: [description]
+        """
         _headers: Set[str] = set()
         for _ in arg:
             _ks = set(_.keys())
@@ -70,14 +98,16 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
 
 def process_line(line: str) -> Dict[str, str]:
     """process_line(line: str) -> Dict[str, str]:
-
+      
     """
+    #find the data fields in the line 
     _tds: List[str] = re.findall('(<td.+?>.*?</td>)', line)
     result: Dict[str, str] = {}
     for _ in _tds:
-        stuff = re.findall(
+        # for each data field, get the field name as 0
+        match:List[str] = re.findall(
             '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]*?)</td>', _)
-        result[stuff[0][0]] = stuff[0][1]
+        result[match[0][0]] = match[0][1]  # key is the field name, value is the value
 
     return result
 
@@ -88,6 +118,8 @@ class PsudoMain:
     """
 
     def _genoutPath(self):
+        """[summary]
+        """
         parent = self.fdfin.parent
         stem = f'{self.fdfin.stem}.tab'
         self.fdfout = parent / stem
@@ -103,6 +135,18 @@ class PsudoMain:
         return 'not implemented'
 
     def doit(self, arg, *args, **kwargs) -> List[Dict[str, str]]:
+        """[summary]
+
+        Args:
+            arg ([type]): [description]
+
+        Raises:
+            _: [description]
+            _: [description]
+
+        Returns:
+            List[Dict[str, str]]: [description]
+        """
         self.fdfin = FindDataFile(arg).doit()
 
         dic_result: List[Dict[str, str]] = []
@@ -158,6 +202,11 @@ class FindDataFile:
         return '%s(%r)' % (self.__class__, self.__dict__)
 
     def doit(self) -> Path:
+        """[summary]
+
+        Returns:
+            Path: [description]
+        """
         # result = (chain.from_iterable(
         # glob(os.path.join(x[0], FILE_NAME)) for x in os.walk('.')))
 
@@ -169,6 +218,11 @@ class FindDataFile:
 
 
 def main():
+    """[summary]
+
+    Raises:
+        ex: [description]
+    """
     THE_LOGGER.info('main executed')
     try:
         _pm = PsudoMain()

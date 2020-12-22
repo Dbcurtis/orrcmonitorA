@@ -5,11 +5,15 @@ Test file for need
 
 from typing import Any, Tuple, List, Dict, Set
 import unittest
-import context
+#import context
 #import orrcmonitor
 from orrcmonitor import  FindDataFile, PsudoMain, main, process_line
 from pathlib import Path
 #import context
+
+ppath=os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(ppath)
+from orrcomnitor import PsudoMain, FindDataFile
 
 
 class TestOrrcMonitor(unittest.TestCase):
