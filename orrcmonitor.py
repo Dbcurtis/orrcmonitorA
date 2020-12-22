@@ -51,15 +51,18 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
     """[summary]
 
     Args:
-        arg (List[Dict[str, str]]): [description]
+        arg (List[Dict[str, str]]): a list of Dicts with html <td></td> per <tr>
+        args and kwargs not used.
 
     Returns:
-        List[str]: [description]
+        List[str]: a list of str with the key row first and the data rows after
+        tab seperated values.
     """
+    
     result: List[str] = []
 
     def _setup_keys() -> List[str]:
-        """[summary]
+        """returns a sorted list of keys in all of the dics in arg
 
         Returns:
             List[str]: [description]
@@ -97,17 +100,38 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
 
 
 def process_line(line: str) -> Dict[str, str]:
-    """process_line(line: str) -> Dict[str, str]:
-      
+    """Process_Line(string) -> Dict[str,str]
+
+    Args:
+        line (str): A line for a <td...> data </td> </tr>
+        such as:(all one line)
+        <td class="grid-cell Center" data-name="TxFreq">147.0000</td>
+        <td class="grid-cell Center" data-name="RxFreq">147.6000</td>
+        <td class="grid-cell"        data-name="NearestCity">Medford</td>
+        <td class="grid-cell Center" data-name="RepeaterCallSign">K7RVM</td>
+        <td class="grid-cell Center" data-name="CoordinationHolder">K7RVM</td>
+        <td class="grid-cell Center" data-name="Contact">N6WN</td>
+        <td class="grid-cell Center" data-name="Sponsor">K7RVM</td>
+        <td class="grid-cell Center" data-name="Region">5</td>
+        <td class="grid-cell Center" data-name="ARRL_Region">South Central Oregon</td>
+        <td class="grid-cell" data-name="ARRL_Code">oewxt(123.0)</td>    
+        </tr>
+
+    Returns:
+        Dict[str, str]: where the key is the data-name value
+        (...data-name="TxFreq"> => a key of 'TxFreq' with a value of '1470000'
+        
     """
-    #find the data fields in the line 
+
+    #find the data fields in the line <td> ... </td>
     _tds: List[str] = re.findall('(<td.+?>.*?</td>)', line)
     result: Dict[str, str] = {}
     for _ in _tds:
         # for each data field, get the field name as 0
         match:List[str] = re.findall(
             '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]*?)</td>', _)
-        result[match[0][0]] = match[0][1]  # key is the field name, value is the value
+        #result[key]=value
+        result[match[0][0]] = match[0][1]  # match[0][0] is the key and [0][1] is the value
 
     return result
 
@@ -121,12 +145,13 @@ class PsudoMain:
         """[summary]
         """
         parent = self.fdfin.parent
-        stem = f'{self.fdfin.stem}.tab'
+        stem = f'{self.fdfin.stem}{self.ext}'
         self.fdfout = parent / stem
 
-    def __init__(self):
+    def __init__(self,ext:str='.tab'):
         self.fdfin: Path = Path('.')
         self.fdfout: Path = Path('.')
+        self.ext:str = ext
 
     def __str__(self) -> str:
         return 'not implemented'
@@ -134,7 +159,7 @@ class PsudoMain:
     def __repr__(self) -> str:
         return 'not implemented'
 
-    def doit(self, arg, *args, **kwargs) -> List[Dict[str, str]]:
+    def doit(self, arg, *args, **kwargs) -> Path:
         """[summary]
 
         Args:
@@ -145,7 +170,7 @@ class PsudoMain:
             _: [description]
 
         Returns:
-            List[Dict[str, str]]: [description]
+            Path: the path to the just created tab delimited file
         """
         self.fdfin = FindDataFile(arg).doit()
 
@@ -159,16 +184,15 @@ class PsudoMain:
 
         except Exception as _:
             raise _
-        result = process_dic_result(dic_result)
+        result:List[str] = process_dic_result(dic_result)
         self._genoutPath()
         try:
             with open(self.fdfout, 'w') as df:
-                for ln in result:
-                    df.write(ln)
+                df.writelines(result)
 
         except Exception as _:
             raise _
-        return result
+        return self.fdfout
 
 
 class FindDataFile:
@@ -234,52 +258,52 @@ def main():
         pass
 
 
-def test1():
-    pass
+# def test1():
+#     pass
 
 
-def test2():
-    """FindDataFile_instat
+# def test2():
+#     """FindDataFile_instat
 
-    Test FindDataFile strings
+#     Test FindDataFile strings
 
-    """
-    _fdf = FindDataFile(Path.cwd())
-    estr: str = r'searching for k7rvmraw.txt under m:\Python\Python3_packages\orrcmonitor'
-    erepr: str = "<class '__main__.FindDataFile'>({'dirpath': WindowsPath('m:/Python/Python3_packages/orrcmonitor'), 'sfn': 'k7rvmraw.txt'})"
-    assert estr == str(_fdf)
-    assert erepr == repr(_fdf)
-
-
-def test3():
-    """FindDataFile_instat
-
-    Test FindDataFile strings
-
-    """
-    _fdf = FindDataFile(Path.cwd())
-    pth2file: Path = _fdf.doit()
-    lines: List[str]
-    with open(pth2file, 'r') as fl:
-        lines = fl.readlines()
-    assert len(lines) == 6
-
-    a = 0
-
-    stuff = process_line(lines[0])
-    estuff = "{'TxFreq': '145.2400', 'RxFreq': '144.6400', 'NearestCity': 'Medford', 'RepeaterCallSign': 'KG7FOJ', 'CoordinationHolder': 'K7RVM', 'Contact': 'N6WN', 'Sponsor': 'K7RVM', 'Region': '5', 'ARRL_Region': 'South West Oregon', 'ARRL_Code': 'oe'}"
-    assert str(stuff) == estuff
-
-    result: List[Dict[str, str]] = []
-
-    for l in lines:
-        stuff = process_line(l)
-        result.append(stuff)
-    assert len(lines) == len(result)
+#     """
+#     _fdf = FindDataFile(Path.cwd())
+#     estr: str = r'searching for k7rvmraw.txt under m:\Python\Python3_packages\orrcmonitor'
+#     erepr: str = "<class '__main__.FindDataFile'>({'dirpath': WindowsPath('m:/Python/Python3_packages/orrcmonitor'), 'sfn': 'k7rvmraw.txt'})"
+#     assert estr == str(_fdf)
+#     assert erepr == repr(_fdf)
 
 
-def dataval1():
-    pass
+# def test3():
+#     """FindDataFile_instat
+
+#     Test FindDataFile strings
+
+#     """
+#     _fdf = FindDataFile(Path.cwd())
+#     pth2file: Path = _fdf.doit()
+#     lines: List[str]
+#     with open(pth2file, 'r') as fl:
+#         lines = fl.readlines()
+#     assert len(lines) == 6
+
+#     a = 0
+
+#     stuff = process_line(lines[0])
+#     estuff = "{'TxFreq': '145.2400', 'RxFreq': '144.6400', 'NearestCity': 'Medford', 'RepeaterCallSign': 'KG7FOJ', 'CoordinationHolder': 'K7RVM', 'Contact': 'N6WN', 'Sponsor': 'K7RVM', 'Region': '5', 'ARRL_Region': 'South West Oregon', 'ARRL_Code': 'oe'}"
+#     assert str(stuff) == estuff
+
+#     result: List[Dict[str, str]] = []
+
+#     for l in lines:
+#         stuff = process_line(l)
+#         result.append(stuff)
+#     assert len(lines) == len(result)
+
+
+# def dataval1():
+#     pass
 
 
 if __name__ == '__main__':
@@ -314,14 +338,14 @@ if __name__ == '__main__':
         if val == 0:
             main()
 
-        elif val == 1:
-            test1()
-        elif val == 2:
-            test2()
-        elif val == 3:
-            test3()
-        elif val == 4:
-            dataval1()
+        # elif val == 1:
+        #     test1()
+        # elif val == 2:
+        #     test2()
+        # elif val == 3:
+        #     test3()
+        # elif val == 4:
+        #     dataval1()
 
         else:
             raise Exception("wrong val")
