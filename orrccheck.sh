@@ -11,7 +11,7 @@ getdatedfilename $rawfileprefix .txt #returns file name in $outfilename
 
 wget -p http://www.orrc.org/Coordinations/Published
 cd www.orrc.org || exit 50
-rm -r Scripts bundles Content  # do not need data in here
+rm -r Scripts bundles Content # do not need data in bundles or Content
 cd Coordinations/ || exit 51  # do need data in Coordinations
 pwdv=$(pwd)
 #
