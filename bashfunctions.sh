@@ -3,11 +3,12 @@
 # use by source bashfunctions.sh
 # then invoke the function you want
 #####################################
+
 #>>>>getdatedfilename pre post
 #####################################
 # GLOBALS: outfilename
 # ARGUMENTS: pre post
-# OUTPUTS: $outfilename
+# OUTPUTS: $outfilename  
 # RETURN:
 #
 # the filename is structured as pre_YYYYMMDDHHMMSSpost
@@ -34,7 +35,7 @@ getdatedfilename() {
 
 
 #####################################
-#>>>>reversesortfiles() 
+#>>>>reversesortfiles()
 # GLOBALS:  rsdatedfiles -reverse sort of dated files in current working dir
 # ARGUMENTS: something like 'k7rvmraw_'
 # OUTPUTS:
@@ -44,14 +45,17 @@ getdatedfilename() {
 
 reversesortfiles() {
   local prefix=$1
-  local files=("$prefix*.txt")
-  #echo "${files[@]}"
-  local OLDIFS=$IFS
-  IFS=$'\n' rsdatedfiles=($(sort -r <<<"${files[*]}"));
-  IFS=$OLDIFS
-  #echo "${rsdatedfiles[@]}"
+  local files=($prefix*.txt)
+  local oldifs="$IFS"
+# shellcheck disable=SC2034 #calling shell has exported this
+  IFS=$'\n' rsdatedfiles=($(sort -r <<<"${files[*]}"))
+  IFS="$oldifs"
 }
 
+#  for i in "${rsdatedfiles[@]}"; do echo "$i"; done
+#  for (( i=0; i<$len; i++ )); do echo "${rsdatedfiles[$i]}"; done
+#####################################
+#####################################
 
-#####################################
-#####################################
+
+

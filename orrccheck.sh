@@ -1,100 +1,119 @@
 #!/usr/bin/bash
 
-# TODO not sure I need to export these
-export  outfilename
-export  rsdatedfiles
-# shellcheck source=/dev/null
-source ~/bashfunctions.sh
-rawfileprefix='k7rvmraw'
+# see; http://ahmed.amayem.com/bash-arrays-3-different-methods-for-copying-an-array/
+# for info on copying arrays
 
-getdatedfilename $rawfileprefix .txt #returns file name in $outfilename
+rsdatedfiles=() # value is set in reversesortfiles
+outfilename=''  # value is set in getdatedfilename
+defaultrawfileprefix='k7rvmraw'
+if [ $# -gt 0 ];
+then 
+    rawfileprefix=$1
+else 
+    rawfileprefix="$defaultrawfileprefix"
+fi 
+echo "$rawfileprefix"
+
+printarray(){
+    title=$1
+    #filarray=rsdatedfiles[@]
+    len=${#rsdatedfiles[@]}
+    printf "\n##############\n%s\n############\n" "$title "
+    for (( i=0; i<len; i++ ));do
+        echo "${rsdatedfiles[$i]}"
+    done
+
+}
+
+
+# shellcheck source=/dev/null
+source ./bashfunctions.sh
+
+getdatedfilename $rawfileprefix .txt #returns new dated file name in $outfilename
+# the dated file name is of the form pre_YYYYMMDDHHMMSSpost
 
 wget -p http://www.orrc.org/Coordinations/Published
 cd www.orrc.org || exit 50
-rm -r Scripts bundles Content # do not need data in bundles or Content
+rm -r Scripts bundles Content # do not need data in Scripts, bundles, or Content
 cd Coordinations/ || exit 51  # do need data in Coordinations
-pwdv=$(pwd)
-#
-# look at  /Coordnations/Published, extract all records that contain
-# n6wn or kg7foj or k7rvm upper or lower case
-# dump to the dated file name from outfilename
-#
-grep -i 'N6wn\|KG7FOJ\|K7RVM' Published > "$outfilename"
-out_file_path="$pwdv/$outfilename"    # get the absolute pate
 
-echo "output filepath is $out_file_path"
 
-#files=(k7rvmraw_*.txt) #  files is an array(?) of matching files
-##
-##IFS set to recognize new lines
-## sorted is an array of the file names reverse sorted
-## is IFS is set back to default (I hope)
-##
-#IFS=$'\n' sorted=($(sort -r <<<"${files[*]}")); unset IFS;
+: '
+    look at  /Coordnations/Published, extract all records that contain
+    n6wn or kg7foj or k7rvm upper or lower case
+    put a first line showing the version of the shell script and add a missin <tr>,
+    clean up the records seperating out the <td>...</td> lines
+    and making the <tr>...</tr> obvious
+    dump to the dated file name from outfilename
+'
 
-reversesortfiles 'k7rvmraw_'
+grep -i 'N6wn\|KG7FOJ\|K7RVM' Published | \
+sed 's#</td><td#</td>\n<td#g' | \
+sed 's#</tr>#\n</tr>\n<tr>#' | \
+sed '1 i v1.0.0<tr>' \
+> "$outfilename"
 
-if [ "${rsdatedfiles[0]}" = "$outfilename" ]
+#pwdv=$(pwd)
+#out_file_path="$pwdv/$outfilename"    # get the absolute path
+#echo "output filepath is $out_file_path"
+
+arg="${rawfileprefix}_"
+
+reversesortfiles "$arg"
+
+if [ "${rsdatedfiles[0]}" = "$outfilename" ] #checking for consistancy
 then
-    echo "$outfilename" 
+    echo "current file is: $outfilename"
+    echo "removing Published dir"
     rm Published   # if the most current file is the one we expect, delete Published
-    len=${#rsdatedfiles[@]}
     #
     # check if there was a change between the last file and the current file
     #
-
-    local temp=$(diff -s "$outfilename" "${rsdatedfiles[1]}")
-    sub='are identical'
-    if [[ "$temp" == *"$sub"* ]]
+    if  diff "$outfilename" "${rsdatedfiles[1]}" > /dev/null 
     then
-	echo "removing ${rsdatedfiles[1]}"
-	rm -i "${rsdatedfiles[1]}"   # the -i requires user to agree to delete
+	    echo "removing ${rsdatedfiles[1]}"
+	    rm -i "${rsdatedfiles[1]}"   # deleating the older identical file
     fi
 else
     echo "something screwy 1"
     exit 1
-
 fi
-reverseortfiles 'k7rvmraw_'
+
+#  for i in "${rsdatedfiles[@]}"; do echo "$i"; done
+#  for (( i=0; i<$len; i++ )); do echo "${rsdatedfiles[$i]}"; done
+
+reversesortfiles "$arg"  # do it again as one file may have been deleated
+printarray "history of changes "
 
 
+declare -a toB_deleated
+toB_deleated=()
 
-
-    for (( i=2; i<len+1; i++ ));  # copied from an example, I would have used i=1; i<len; i++
-    do
-	echo "${sorted[$i-1]}"
-	temp=$(diff -s "$outfilename" "${sorted[$i-1]}")
-	sub='are identical'
-	if [[ "$temp" == *"$sub"* ]]
-	then
-		echo "removing ${sorted[$i-1]}"
-		rm -i "${sorted[$i-1]}"   # the -i requires user to agree to delete
-		break
-	fi
-	
-    done
-
-    echo "removed current duplictes"
-
-
-    files=(k7rvmraw_*.txt)
-    IFS=$'\n' sorted=($(sort -r <<<"${files[*]}")); unset IFS;
-    len=${#sorted[@]}
-#    for j in "${sorted[@]}"; do echo "$j"; done
-#    echo "sorted len is $len"
-    if [ "$len" -gt 10 ]
-    then
-	#delete files from 9 to end
-	for (( i=9; i<len+1; i++ ));
-	do
-#		echo "i is $i"
-#		echo "removeing ${sorted[$i-1]}"
-		rm -i "${sorted[$i-1]}"
-	done
+for (( i=1; i<len; i++ )); do # find duplicate file contents mark for deletion
+    echo "compare ${rsdatedfiles[$i-1]} and ${rsdatedfiles[$i]}"
+    if  diff "${rsdatedfiles[$i-1]}" "${rsdatedfiles[$i]}" > /dev/null 
+    then 
+        toB_deleated+=("${rsdatedfiles[$i-1]}")
     fi
-else
-    echo "unexpected condition"
-    exit 53
+done
+
+echo "duplicate files to be deleated"
+for f in ${toB_deleated[*]}; do 
+    echo "$f"
+done
+
+reversesortfiles "$arg" 
+len=${#rsdatedfiles[@]}
+
+printarray "saved files"
+if [[ $len -gt 9 ]]; then
+    toB_gone=("${rsdatedfiles[@]:10:$len}")
+
+    len=${#toB_gone[@]}
+    printf "\n##############\n%s\n############\n" "too many files, deleateing:"
+    for (( i=0; i<len; i++ ));do
+        echo "${toB_gone[$i]}"
+    done
 fi
 
 unset outfillename
