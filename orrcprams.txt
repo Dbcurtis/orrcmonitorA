@@ -1,0 +1,18 @@
+#
+# this is a comment 
+# blank lines are not allowed, but the last line must be empty
+#
+# default raw prefix
+deffilepre:k7rvmraw 
+#
+# default max number of dated raw files to keep 
+maxfiles2keep:10
+#
+# grepsearch with required escapes this string will be
+# inclosed in single quotes in bash
+# for example N6wn\|KG7FOJ\|K7RVM
+#
+# 
+searchstring:N6wn\|KG7FOJ\|K7RVM
+#
+# last line (the next one) must be empty (blank, no chacters)

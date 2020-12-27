@@ -3,6 +3,20 @@
 # see; http://ahmed.amayem.com/bash-arrays-3-different-methods-for-copying-an-array/
 # for info on copying arrays
 
+
+:'
+    command line options and parameters.
+    ./orrccheck -s -f:fileprefix -e:fileprefix -n:num
+
+    -s do not delete any files implies -d and ignores -n val
+    -d do not check for identical adjacent files 
+
+    -f use fileprefix as a onetime prefix
+    -e use fileprefix this time and future times
+    -n use num to specify the number of different files to keep and set again
+
+'
+
 rsdatedfiles=() # value is set in reversesortfiles
 outfilename=''  # value is set in getdatedfilename
 defaultrawfileprefix='k7rvmraw'
@@ -122,4 +136,3 @@ unset outfillename
 #rm Published
 cd ../..
 exit 0
-
