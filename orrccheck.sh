@@ -83,23 +83,24 @@ fi
 #  for (( i=0; i<$len; i++ )); do echo "${rsdatedfiles[$i]}"; done
 
 reversesortfiles "$arg"  # do it again as one file may have been deleated
-printarray "history of changes "
+printarray "purging history of changes "
 
 
 declare -a toB_deleated
 toB_deleated=()
 
 for (( i=1; i<len; i++ )); do # find duplicate file contents mark for deletion
-    echo "compare ${rsdatedfiles[$i-1]} and ${rsdatedfiles[$i]}"
+    #echo "compare ${rsdatedfiles[$i-1]} and ${rsdatedfiles[$i]}"
     if  diff "${rsdatedfiles[$i-1]}" "${rsdatedfiles[$i]}" > /dev/null 
     then 
-        toB_deleated+=("${rsdatedfiles[$i-1]}")
+        toB_deleated+=("${rsdatedfiles[$i]}")
     fi
 done
 
 echo "duplicate files to be deleated"
 for f in ${toB_deleated[*]}; do 
     echo "$f"
+    rm -i "$f"
 done
 
 reversesortfiles "$arg" 
@@ -110,9 +111,10 @@ if [[ $len -gt 9 ]]; then
     toB_gone=("${rsdatedfiles[@]:10:$len}")
 
     len=${#toB_gone[@]}
-    printf "\n##############\n%s\n############\n" "too many files, deleateing:"
+    printf "\n##############\n%s\n############\n" "too many files, deleting:"
     for (( i=0; i<len; i++ ));do
-        echo "${toB_gone[$i]}"
+        echo "deleating ${toB_gone[$i]}"
+        rm "${toB_gone[$i]}"
     done
 fi
 
