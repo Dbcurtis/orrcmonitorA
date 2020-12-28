@@ -1,6 +1,7 @@
 #
 # this is a comment 
 # blank lines are not allowed, but the last line must be empty
+# values must not contain [[:blank:]] charaters (well they are removed)
 #
 # default raw prefix
 deffilepre:k7rvmraw 
@@ -12,7 +13,9 @@ maxfiles2keep:10
 # inclosed in single quotes in bash
 # for example N6wn\|KG7FOJ\|K7RVM
 #
-# 
 searchstring:N6wn\|KG7FOJ\|K7RVM
 #
+# program inserted diffinitions follow.
+#
+# 
 # last line (the next one) must be empty (blank, no chacters)

@@ -3,8 +3,7 @@
 # see; http://ahmed.amayem.com/bash-arrays-3-different-methods-for-copying-an-array/
 # for info on copying arrays
 
-
-:'
+: '
     command line options and parameters.
     ./orrccheck -s -f:fileprefix -e:fileprefix -n:num
 
@@ -19,7 +18,17 @@
 
 rsdatedfiles=() # value is set in reversesortfiles
 outfilename=''  # value is set in getdatedfilename
-defaultrawfileprefix='k7rvmraw'
+
+source genpramdic.sh
+declare -A dict 
+gen_pram_dict "orrcprams.txt"
+
+# for x in "${!dict[@]}"
+#     do printf "[%s]=>%s\n" "$x" "${dict[$x]}"
+# done 
+
+defaultrawfileprefix="${dict['deffilepre']}"
+
 if [ $# -gt 0 ];
 then 
     rawfileprefix=$1
@@ -72,7 +81,7 @@ sed '1 i v1.0.0<tr>' \
 #echo "output filepath is $out_file_path"
 
 arg="${rawfileprefix}_"
-
+echo "arg is: $arg"
 reversesortfiles "$arg"
 
 if [ "${rsdatedfiles[0]}" = "$outfilename" ] #checking for consistancy
@@ -90,6 +99,9 @@ then
     fi
 else
     echo "something screwy 1"
+    echo "outfilename = -$outfilename-"
+    aaa="${rsdatedfiles[0]}"
+    echo "most recient file is: -$aaa-"
     exit 1
 fi
 
