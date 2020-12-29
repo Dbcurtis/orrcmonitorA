@@ -3,29 +3,146 @@
 # see; http://ahmed.amayem.com/bash-arrays-3-different-methods-for-copying-an-array/
 # for info on copying arrays
 
-: '
-    command line options and parameters.
-    ./orrccheck -s -f:fileprefix -e:fileprefix -n:num
+# Name of the script
+SCRIPT=$( basename "$0" )
 
-    -s do not delete any files implies -d and ignores -n val
-    -d do not check for identical adjacent files 
+# Current version
+VERSION="1.0.0"
 
-    -f use fileprefix as a onetime prefix
-    -e use fileprefix this time and future times
-    -n use num to specify the number of different files to keep and set again
+function version
+{
+    local txt=(
+        "$SCRIPT version $VERSION"
+    )
+    printf "%s\n" "${txt[@]}"
+}
 
-'
 
-rsdatedfiles=() # value is set in reversesortfiles
-outfilename=''  # value is set in getdatedfilename
+function keyexists(){
+    #
+    # use like keyexists 'junk' || echo 'no junk key'
+    # 
+    for k in "${!options[@]}"
+    do 
+        [[ "$1" == "$k" ]] && return 0 || continue
+    done
+    return 1
+}
+
+
+function showhelp(){
+    local text=(
+        'command line options and parameters.'
+        './orrccheck.sh -s -d -f:fileprefix -e:fileprefix -n:num -h'
+        ''
+        '-s do not delete any files implies -d and ignores -n val'
+        '-d do not check for identical adjacent files '
+        '-f use fileprefix as a onetime prefix '
+        '-e use fileprefix this time and set as default'
+        '-n use num to specify the number of different files to keep and set as default'
+        '-x specify search-for regex with \ escape characters'
+        '   eg.: "n6wn\|ku6y\|wt6k"  -- overrides the config file'
+        '-h print usage'
+        ''
+    )
+    version
+    printf "%s\n" "${text[@]}"
+}
+
+declare -A options
+#options=([marker]="markera")
+
+
+function saveall(){
+    num2save -1
+    options+=([saveall]=true)
+}
+
+function saveiaf(){
+    options+=([saveiaf]=true)
+}
+
+function num2save(){
+    options+=([num2save]="$1")
+}
+
+function onetimeprefix(){
+    options+=([onetimeprefix]="$1")
+}
+
+function setprefix(){
+    echo 'setprefix needs more work'
+    options+=([setprefix]="$1")
+}
+
+function setextractregex(){
+    options+=([regex]="$1")
+}
+
+#num2save 10 ## init number to save
+if [ $# -gt 0 ];
+then
+    while getopts "hsdf:e:n:x:" opt; do 
+        case $opt in 
+            s)
+                saveall
+                saveiaf
+                
+            ;;
+            d)
+                saveiaf 
+            ;;
+            f)
+                onetimeprefix "$OPTARG"
+            ;;
+            e)
+                setprefix "$OPTARG"
+            ;;
+            n)
+                num2save "$OPTARG"
+            ;;
+            x)
+                setextractregex "$OPTARG"
+            ;;
+            h)
+                #works
+                showhelp
+                exit 1
+            ;;
+            \?)
+                #works
+                showhelp
+                exit 1
+            ;;
+        esac
+    done
+else
+    
+    echo 'using saved config'
+
+fi
+
+function fixargs(){
+    keyexists 'saveall' && num2save -1
+}
+
+fixargs
+for k in "${!options[@]}"; do echo "$k: ${options[$k]}"; done
+
+rsdatedfiles=() # value is set by reversesortfiles
+outfilename=''  # value is set by getdatedfilename
 
 source genpramdic.sh
 declare -A dict 
 gen_pram_dict "orrcprams.txt"
 
-# for x in "${!dict[@]}"
-#     do printf "[%s]=>%s\n" "$x" "${dict[$x]}"
-# done 
+keyexists 'regex' && dict+=([searchstring]=${options[regex]})
+keyexists 'num2save' && dict+=([maxfiles2keep]=${options[num2save]})
+keyexists 'onetimeprefix' && dict+=([deffilepre]=${options[onetimeprefix]})
+
+for k in "${!dict[@]}"; do echo "$k: ${dict[$k]}"; done
+
+exit 0
 
 defaultrawfileprefix="${dict['deffilepre']}"
 
@@ -53,7 +170,7 @@ printarray(){
 source ./bashfunctions.sh
 
 getdatedfilename $rawfileprefix .txt #returns new dated file name in $outfilename
-# the dated file name is of the form pre_YYYYMMDDHHMMSSpost
+# the dated file name is of the form $rawfileprefix_YYYYMMDDHHMMSS.txt
 
 wget -p http://www.orrc.org/Coordinations/Published
 cd www.orrc.org || exit 50
