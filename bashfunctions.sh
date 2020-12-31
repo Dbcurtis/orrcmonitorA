@@ -51,7 +51,7 @@ reversesortfiles() {
   IFS=$'\n' rsdatedfiles=($(sort -r <<<"${files[*]}"))
   IFS="$oldifs"
 }
-
+# ways to display rsdtaedfiles content:
 #  for i in "${rsdatedfiles[@]}"; do echo "$i"; done
 #  for (( i=0; i<$len; i++ )); do echo "${rsdatedfiles[$i]}"; done
 #####################################

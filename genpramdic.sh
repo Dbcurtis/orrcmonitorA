@@ -1,5 +1,6 @@
 #!/usr/bin/bash
 
+#this function has not been tested
 printarr() { declare -n __p="$1"; for k in "${!__p[@]}"; do printf "%s=%s\n" "$k" "${__p[$k]}" ; done ;  }  
 
 gen_pram_dict(){
@@ -17,9 +18,7 @@ gen_pram_dict(){
             #echo $line
             lines=( "${lines[@]}" "$line" ) # i think IFS screws up the += syntax   
         done < "$1"
-        IFS=$priorIFS
-
-        
+        IFS=$priorIFS        
     }
 
     make_dict(){

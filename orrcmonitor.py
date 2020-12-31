@@ -58,7 +58,7 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         List[str]: a list of str with the key row first and the data rows after
         tab seperated values.
     """
-    
+
     result: List[str] = []
 
     def _setup_keys() -> List[str]:
@@ -67,7 +67,7 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         Returns:
             List[str]: [description]
         """
-        
+
         _headers: Set[str] = set()
         for _ in arg:
             _ks = set(_.keys())
@@ -91,6 +91,8 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         keys.ac,
     ]
 
+    dict=kwargs.get('prams',None)
+    
     result.append('Information\n')  # title
     result.append('\t'.join(keyseq) + '\n')  # column titles
     for _ in arg:
@@ -121,18 +123,19 @@ def process_line(line: str) -> Dict[str, str]:
     Returns:
         Dict[str, str]: where the key is the data-name value
         (...data-name="TxFreq"> => a key of 'TxFreq' with a value of '1470000'
-        
+
     """
 
-    #find the data fields in the line <td> ... </td>
+    # find the data fields in the line <td> ... </td>
     _tds: List[str] = re.findall('(<td.+?>.*?</td>)', line)
     result: Dict[str, str] = {}
     for _ in _tds:
         # for each data field, get the field name as 0
-        match:List[str] = re.findall(
+        match: List[str] = re.findall(
             '<td.+?data-name=["](.+?)["]>([0-9A-Za-z)(._ ]*?)</td>', _)
-        #result[key]=value
-        result[match[0][0]] = match[0][1]  # match[0][0] is the key and [0][1] is the value
+        # result[key]=value
+        # match[0][0] is the key and [0][1] is the value
+        result[match[0][0]] = match[0][1]
 
     return result
 
@@ -141,35 +144,53 @@ class PsudoMain:
     """
 
     """
-    def _getConfiguration(self)->Dict[str,Any]:
-        configP:Path = Path.home() / '.config' / 'orrccheck.d' / 'orrcprams.txt'
-        dataP:Path = Path.home() / '.local' / 'share' / 'orrccheck' / 'www.orrc.org' / 'Coordinations'
+
+    def _getConfiguration(self) -> Dict[str, Any]:
+        configP: Path = Path.home() / '.config' / 'orrccheck.d' / 'orrcprams.txt'
+        dataP: Path = Path.home() / '.local' / 'share' / 'orrccheck' / \
+            'www.orrc.org' / 'Coordinations'
         if not (configP.exists() and configP.is_file()):
-            raise ValueError('orrcprams.txt not in ~/.config/orrccheck.d/orrcprams.txt')
+            raise ValueError(
+                'orrcprams.txt not in ~/.config/orrccheck.d/orrcprams.txt')
         if not (dataP.exists() and dataP.is_dir()):
-            raise ValueError('~.local/share/orrccheck/www.orrc.org/Coordinations directory does not exist')
-        
-        
-        cleanlines:List[str] = []
-        result:Dict[str,str]={}
+            raise ValueError(
+                '~.local/share/orrccheck/www.orrc.org/Coordinations directory does not exist')
+
+        cleanlines: List[str] = []
+        result: Dict[str, str] = {}
         try:
-            rawlines:List[str]=[]
-            with open(configP,'r') as infile:
+            rawlines: List[str] = []
+            with open(configP, 'r') as infile:
                 rawlines = infile.readlines()
-            
-            cleanlines:List[str]=[l for l in rawlines if not l.startswith('#') and len(l.strip())>0]
+
+            cleanlines: List[str] = [
+                l for l in rawlines if not l.startswith('#') and len(l.strip()) > 0]
         except IOError as ioe:
             raise ioe
-        
-        for ln in cleanlines: 
-            aa=ln.split('\n')
-            bb=aa[0].split('\n')
-            code:List[str,str]=bb[0].split(':')
-            result[code[0]]=code[1]
-        
+
+        for ln in cleanlines:
+            aa = ln.split('\n')
+            bb = aa[0].split('\n')
+            code: List[str, str] = bb[0].split(':')
+            result[code[0]] = code[1]
+
         #dataP:Path = Path.home() / '.local' / 'share' / 'orrccheck ' / 'www.orrc.org' / 'Coordinations'
-        result['datap']=dataP       
+        result['datap'] = dataP
         return result
+    
+    def _settimestamp(self):
+        filename:str = self.fdfin.name
+        match = re.search(r"_([0-9]{8})([0-9]{6})",filename)
+        date=match.group(1)
+        time=match.group(2)
+        #looking for the numbers in k7rvmraw_20201229231119.txt
+        year=date[0:4]
+        mo = date[4:5]
+        dy = date[6:7]
+        hr = time[0:1]
+        mn = time[2:3]
+        sc = time[4:4]
+        
 
     def _genoutPath(self):
         """[summary]
@@ -178,11 +199,12 @@ class PsudoMain:
         stem = f'{self.fdfin.stem}{self.ext}'
         self.fdfout = parent / stem
 
-    def __init__(self,ext:str='.tab'):
-        self.prams:Dict[str,Any]=self._getConfiguration()
+    def __init__(self, ext: str = '.tab'):
+        self.prams: Dict[str, Any] = self._getConfiguration()
         self.fdfin: Path = self.prams['datap']
         self.fdfout: Path = Path('.')
-        self.ext:str = ext
+        self.ext: str = ext
+        self.prams['dataversion']=None
 
     def __str__(self) -> str:
         return 'not implemented'
@@ -203,50 +225,61 @@ class PsudoMain:
         Returns:
             Path: the path to the just created tab delimited file
         """
-        self.fdfin = FindDataFile(self.fdfin,sfn=self.prams['deffilepre']).doit()
+        self.fdfin = FindDataFile(
+            self.fdfin, sfn=self.prams['deffilepre']).doit()
 
+        self._settimestamp()
         dic_result: List[Dict[str, str]] = []
-        lines:List[str]=[]
+        lines: List[str] = []
         try:
             with open(self.fdfin, 'r') as df:
-                lines=df.readlines()
-            a=0
-            s:List[str]=lines[0].split('<tr>\n')
-            version = s[0]
-            lines[0]='<tr>\n'
-            groups:List[List[str]] =[]
-            row=[]
+                lines = df.readlines()
+
+            _: List[str] = lines[0].split('<tr>\n') # extract version from first line
+            self.prams['dataversion']=_[0]
+            lines[0] = '<tr>\n'    # replace line 0
+            coordinations: List[List[str]] = []
+            row:List[str] = []
+            l:str=''
+            #
+            # generate a list of shortlines sans \n 
+            #
             for l in lines:
-                ls = l.split('\n')
-                ll = ls[0]
-                
-                if '<tr>' in ll:
-                    row=[]
-                    row.append(ll)
-                elif '</tr>' in ll:
-                    row.append(ll)
-                    groups.append(row)
+                _ = l.split('\n') # lose the new line
+                _shortline:str = _[0]
+
+                if '<tr>' in _shortline: # start new row
+                    row = []
+                    row.append(_shortline)
+                elif '</tr>' in _shortline: # end row
+                    row.append(_shortline)
+                    coordinations.append(row) 
                 else:
-                    row.append(ll)
-            
-            longlines = []
-            for g in groups:
-                a=" ".join(g)
-                longlines.append(a)
-            
-            for l in longlines:
-                dic_result.append(process_line(l))
-            
+                    row.append(_shortline) # add to row
+
+            longlines:List[str] = []
+            _longline:str=''
+            for _ in coordinations:  # generate long line from the shorlines
+                _longline = " ".join(_)
+                longlines.append(_longline)
+
+            for _longline in longlines: # generate the dics from the longline
+                dic_result.append(process_line(_longline))
 
         except Exception as _:
             raise _
-        result:List[str] = process_dic_result(dic_result)
-        self._genoutPath()
+        # 
+        # result is the tab delimited data suitable for a .txt file
+        #
+        result: List[str] = process_dic_result(dic_result, prams=self.prams)
+        self._genoutPath()                 # generates the path for the linix storage
+        cwdp: Path = Path.cwd() / self.fdfout.name # generate path for windows access
+
         try:
             with open(self.fdfout, 'w') as df:
                 df.writelines(result)
-            cwdp:Path = Path.cwd() / self.fdfout.name
-            with open(cwdp,'w') as cwdf:
+            
+            with open(cwdp, 'w') as cwdf:
                 cwdf.writelines(result)
 
         except Exception as _:
@@ -294,7 +327,7 @@ class FindDataFile:
         # glob(os.path.join(x[0], FILE_NAME)) for x in os.walk('.')))
 
         _r: str = ''
-        paths:List[Path]=[]
+        paths: List[Path] = []
         for _r in iglob(f'{self.dirpath}/{self.sfn}', recursive=False):
             paths.append(_r)
 
@@ -311,7 +344,7 @@ def main():
     THE_LOGGER.info('main executed')
     try:
         _pm = PsudoMain()
-        info = _pm.doit(Path.cwd())
+        _pm.doit(Path.cwd())
 
     except Exception as ex:
         raise ex
@@ -352,7 +385,7 @@ if __name__ == '__main__':
     except IOError as ioe:
         print(ioe)
         sys.exit(str(ioe))
-    
+
     except ValueError as ve:
         print(ve)
         sys.exit(str(ve))
@@ -365,5 +398,4 @@ if __name__ == '__main__':
         print(exc)
         sys.exit(str(exc))
 
-    
     sys.exit('normal exit')
