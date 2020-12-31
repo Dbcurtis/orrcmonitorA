@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+
 """[summary]
 
     Raises:
@@ -91,9 +93,12 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         keys.ac,
     ]
 
-    dict=kwargs.get('prams',None)
-    
-    result.append('Information\n')  # title
+    dict:Dict[str,Any] =kwargs.get('prams',None)
+    if dict is not None:
+        datetime:str = dict.get("timestamp","undated")
+    else:
+        raise ValueError('dict not passed')
+    result.append(f'Information as of {datetime}\n')  # title
     result.append('\t'.join(keyseq) + '\n')  # column titles
     for _ in arg:
         myvals: List[str] = [_.get(_k) for _k in keyseq]
@@ -184,13 +189,15 @@ class PsudoMain:
         date=match.group(1)
         time=match.group(2)
         #looking for the numbers in k7rvmraw_20201229231119.txt
-        year=date[0:4]
-        mo = date[4:5]
-        dy = date[6:7]
-        hr = time[0:1]
-        mn = time[2:3]
-        sc = time[4:4]
-        
+        year:int=date[0:4]
+        mo:int = date[4:6]
+        dy:int = date[6:8]
+        hr:int = time[0:2]
+        mn:int = time[2:4]
+        sc:int = time[4:6]
+        ss = f'{mo}/{dy}/{year} T {hr}:{mn}:{sc}'
+        self.prams['timestamp']=ss
+                
 
     def _genoutPath(self):
         """[summary]
