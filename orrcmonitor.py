@@ -67,6 +67,7 @@ def process_dic_result(arg: List[Dict[str, str]], *args, **kwargs) -> List[str]:
         Returns:
             List[str]: [description]
         """
+        
         _headers: Set[str] = set()
         for _ in arg:
             _ks = set(_.keys())
@@ -140,6 +141,35 @@ class PsudoMain:
     """
 
     """
+    def _getConfiguration(self)->Dict[str,Any]:
+        configP:Path = Path.home() / '.config' / 'orrccheck.d' / 'orrcprams.txt'
+        dataP:Path = Path.home() / '.local' / 'share' / 'orrccheck' / 'www.orrc.org' / 'Coordinations'
+        if not (configP.exists() and configP.is_file()):
+            raise ValueError('orrcprams.txt not in ~/.config/orrccheck.d/orrcprams.txt')
+        if not (dataP.exists() and dataP.is_dir()):
+            raise ValueError('~.local/share/orrccheck/www.orrc.org/Coordinations directory does not exist')
+        
+        
+        cleanlines:List[str] = []
+        result:Dict[str,str]={}
+        try:
+            rawlines:List[str]=[]
+            with open(configP,'r') as infile:
+                rawlines = infile.readlines()
+            
+            cleanlines:List[str]=[l for l in rawlines if not l.startswith('#') and len(l.strip())>0]
+        except IOError as ioe:
+            raise ioe
+        
+        for ln in cleanlines: 
+            aa=ln.split('\n')
+            bb=aa[0].split('\n')
+            code:List[str,str]=bb[0].split(':')
+            result[code[0]]=code[1]
+        
+        #dataP:Path = Path.home() / '.local' / 'share' / 'orrccheck ' / 'www.orrc.org' / 'Coordinations'
+        result['datap']=dataP       
+        return result
 
     def _genoutPath(self):
         """[summary]
@@ -149,7 +179,8 @@ class PsudoMain:
         self.fdfout = parent / stem
 
     def __init__(self,ext:str='.tab'):
-        self.fdfin: Path = Path('.')
+        self.prams:Dict[str,Any]=self._getConfiguration()
+        self.fdfin: Path = self.prams['datap']
         self.fdfout: Path = Path('.')
         self.ext:str = ext
 
@@ -172,15 +203,40 @@ class PsudoMain:
         Returns:
             Path: the path to the just created tab delimited file
         """
-        self.fdfin = FindDataFile(arg).doit()
+        self.fdfin = FindDataFile(self.fdfin,sfn=self.prams['deffilepre']).doit()
 
         dic_result: List[Dict[str, str]] = []
+        lines:List[str]=[]
         try:
             with open(self.fdfin, 'r') as df:
-                line: str = df.readline()
-                while line:
-                    dic_result.append(process_line(line))
-                    line = df.readline()
+                lines=df.readlines()
+            a=0
+            s:List[str]=lines[0].split('<tr>\n')
+            version = s[0]
+            lines[0]='<tr>\n'
+            groups:List[List[str]] =[]
+            row=[]
+            for l in lines:
+                ls = l.split('\n')
+                ll = ls[0]
+                
+                if '<tr>' in ll:
+                    row=[]
+                    row.append(ll)
+                elif '</tr>' in ll:
+                    row.append(ll)
+                    groups.append(row)
+                else:
+                    row.append(ll)
+            
+            longlines = []
+            for g in groups:
+                a=" ".join(g)
+                longlines.append(a)
+            
+            for l in longlines:
+                dic_result.append(process_line(l))
+            
 
         except Exception as _:
             raise _
@@ -189,6 +245,9 @@ class PsudoMain:
         try:
             with open(self.fdfout, 'w') as df:
                 df.writelines(result)
+            cwdp:Path = Path.cwd() / self.fdfout.name
+            with open(cwdp,'w') as cwdf:
+                cwdf.writelines(result)
 
         except Exception as _:
             raise _
@@ -217,7 +276,7 @@ class FindDataFile:
         if not (self.dirpath.exists() and self.dirpath.is_dir()):
             raise TypeError(f'{self.dirpath} must be a directory')
 
-        self.sfn: str = sfn
+        self.sfn: str = sfn+'_[0-9]*.txt'
 
     def __str__(self) -> str:
         return f'searching for {self.sfn} under {self.dirpath}'
@@ -235,10 +294,12 @@ class FindDataFile:
         # glob(os.path.join(x[0], FILE_NAME)) for x in os.walk('.')))
 
         _r: str = ''
-        for _r in iglob(f'{self.dirpath}/**/{self.sfn}', recursive=True):
-            break
+        paths:List[Path]=[]
+        for _r in iglob(f'{self.dirpath}/{self.sfn}', recursive=False):
+            paths.append(_r)
 
-        return Path(_r)
+        paths.sort(reverse=True)
+        return Path(paths[0])
 
 
 def main():
@@ -256,54 +317,6 @@ def main():
         raise ex
     finally:
         pass
-
-
-# def test1():
-#     pass
-
-
-# def test2():
-#     """FindDataFile_instat
-
-#     Test FindDataFile strings
-
-#     """
-#     _fdf = FindDataFile(Path.cwd())
-#     estr: str = r'searching for k7rvmraw.txt under m:\Python\Python3_packages\orrcmonitor'
-#     erepr: str = "<class '__main__.FindDataFile'>({'dirpath': WindowsPath('m:/Python/Python3_packages/orrcmonitor'), 'sfn': 'k7rvmraw.txt'})"
-#     assert estr == str(_fdf)
-#     assert erepr == repr(_fdf)
-
-
-# def test3():
-#     """FindDataFile_instat
-
-#     Test FindDataFile strings
-
-#     """
-#     _fdf = FindDataFile(Path.cwd())
-#     pth2file: Path = _fdf.doit()
-#     lines: List[str]
-#     with open(pth2file, 'r') as fl:
-#         lines = fl.readlines()
-#     assert len(lines) == 6
-
-#     a = 0
-
-#     stuff = process_line(lines[0])
-#     estuff = "{'TxFreq': '145.2400', 'RxFreq': '144.6400', 'NearestCity': 'Medford', 'RepeaterCallSign': 'KG7FOJ', 'CoordinationHolder': 'K7RVM', 'Contact': 'N6WN', 'Sponsor': 'K7RVM', 'Region': '5', 'ARRL_Region': 'South West Oregon', 'ARRL_Code': 'oe'}"
-#     assert str(stuff) == estuff
-
-#     result: List[Dict[str, str]] = []
-
-#     for l in lines:
-#         stuff = process_line(l)
-#         result.append(stuff)
-#     assert len(lines) == len(result)
-
-
-# def dataval1():
-#     pass
 
 
 if __name__ == '__main__':
@@ -334,21 +347,15 @@ if __name__ == '__main__':
     print(python_version())
 
     try:
-        val = 0
-        if val == 0:
-            main()
+        main()
 
-        # elif val == 1:
-        #     test1()
-        # elif val == 2:
-        #     test2()
-        # elif val == 3:
-        #     test3()
-        # elif val == 4:
-        #     dataval1()
-
-        else:
-            raise Exception("wrong val")
+    except IOError as ioe:
+        print(ioe)
+        sys.exit(str(ioe))
+    
+    except ValueError as ve:
+        print(ve)
+        sys.exit(str(ve))
 
     except SystemError as se:
         print(se)
@@ -358,5 +365,5 @@ if __name__ == '__main__':
         print(exc)
         sys.exit(str(exc))
 
-    finally:
-        sys.exit('normal exit')
+    
+    sys.exit('normal exit')
