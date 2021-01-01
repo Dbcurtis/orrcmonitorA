@@ -252,8 +252,8 @@ cd Coordinations/ || exit 51  # do need data in Coordinations
 
 
 : '
-    look at  /Coordnations/Published, extract all records that contain
-    n6wn or kg7foj or k7rvm upper or lower case
+    look at  /Coordnations/Published, extract all records that match
+    the user specified regex, upper or lower case
     put a first line showing the version of the shell script and add a missing <tr>,
     clean up the records seperating out the <td>...</td> lines
     and making the <tr>...</tr> obvious

@@ -7,13 +7,21 @@ gen_pram_dict(){
     declare -a lines
 
     read_pram_file(){
-        
+    #####################################
+    #>>>>read_pram_file()
+    # extracts data from the file of $1 that is not a blank line or a comment
+    # GLOBALS:  
+    # ARGUMENTS: $1 -- the path to the file
+    # OUTPUTS:  lines containing the extracted lines with [[:blank:]] removed
+    # RETURN: none
+    #
+    #####################################       
         local priorIFS=$IFS
         local linea
         while IFS= read -r linea
         do 
             [[ $linea =~ ^#.* ]] && continue # remove comment lines
-            line=${linea//[[:blank:]]/}
+            line=${linea//[[:blank:]]/}   # trim spaces and tab
             [[ -z $line ]] && continue # remove blank lines
             #echo $line
             lines=( "${lines[@]}" "$line" ) # i think IFS screws up the += syntax   
@@ -22,6 +30,15 @@ gen_pram_dict(){
     }
 
     make_dict(){
+    #####################################
+    #>>>>make_dict()
+    # GLOBALS:  
+    # ARGUMENTS: $1 an array of lines from read_pram_file
+    # each line is of the form 'key:text'
+    # OUTPUTS: a dict of keyword value from the lines
+    # RETURN: 
+    #
+    #####################################
         local priorIFS=$IFS
         declare -a arg1=("${!1}")
         IFS=':'
@@ -34,12 +51,10 @@ gen_pram_dict(){
             dict["$keya"]="$vala"
         done
         IFS=$priorIFS
-        
-        
     }
 ##################################
-    read_pram_file "$1"
-    make_dict lines[@]
+    read_pram_file "$1" # extract non comments from prameter file
+    make_dict lines[@]  # make dict from non comments.
     
 }
 

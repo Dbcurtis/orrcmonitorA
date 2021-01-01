@@ -39,7 +39,7 @@ getdatedfilename() {
 # GLOBALS:  rsdatedfiles -reverse sort of dated files in current working dir
 # ARGUMENTS: something like 'k7rvmraw_'
 # OUTPUTS:
-# RETURN:
+# RETURN: rsdatedfiles with sorted newest to oldest
 #
 #####################################
 
