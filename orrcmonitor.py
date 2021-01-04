@@ -154,12 +154,31 @@ class PsudoMain:
     # if running in wsl, access is ~/.local\share\orrccheck\www.orrc.org\Coordinations
 
     def _getConfiguration(self) -> Dict[str, Any]:
-        configP: Path = Path.home() / '.config' / 'orrccheck.d' / 'orrcprams.txt'
-        dataP: Path = Path.home() / '.local' / 'share' / 'orrccheck' / \
+        configP: Path = Path.home() / '.config' / 'orrccheck.d' / 'lastusedpre.txt'
+
+        last_used_prefix:str =''
+        try:
+            rawlines: List[str] = []
+            with open(configP,'r') as infile:
+                rawlines = infile.readlines()
+            templines:List[str]=[l for l in rawlines if (not l.strip() or not l.strip().startswith('#'))]
+            #line:str = templines[0]
+            spl:List[str]=templines[0].split('\n')
+            spl=spl[0].split('.txt')
+            last_used_prefix=spl[0]
+            
+        except IOError as ioe:
+            raise ioe
+
+        configPA:Path =configP.with_name(f'{last_used_prefix}.txt')
+        if not (configPA.exists() and configPA.is_file()):
+            mes:str = f'{configPA}\n either does not exist or is not a file'
+            raise ValueError(mes)
+        
+        delm:str= f'{last_used_prefix}.d'
+        dataP: Path = Path.home() / '.local' / 'share' / 'orrccheck.d' / delm / \
             'www.orrc.org' / 'Coordinations'
-        if not (configP.exists() and configP.is_file()):
-            raise ValueError(
-                'orrcprams.txt not in ~/.config/orrccheck.d/orrcprams.txt')
+
         if not (dataP.exists() and dataP.is_dir()):
             raise ValueError(
                 '~.local/share/orrccheck/www.orrc.org/Coordinations directory does not exist')
@@ -168,7 +187,7 @@ class PsudoMain:
         result: Dict[str, str] = {}
         try:
             rawlines: List[str] = []
-            with open(configP, 'r') as infile:
+            with open(configPA, 'r') as infile:
                 rawlines = infile.readlines()
 
             cleanlines: List[str] = [
@@ -319,7 +338,7 @@ class FindDataFile:
         if not (self.dirpath.exists() and self.dirpath.is_dir()):
             raise TypeError(f'{self.dirpath} must be a directory')
 
-        self.sfn: str = sfn+'_[0-9]*.txt'
+        self.sfn: str = sfn+'raw_[0-9]*.txt'
 
     def __str__(self) -> str:
         return f'searching for {self.sfn} under {self.dirpath}'
@@ -408,4 +427,4 @@ if __name__ == '__main__':
         print(exc)
         sys.exit(str(exc))
 
-    sys.exit('normal exit')
+    sys.exit(0)
