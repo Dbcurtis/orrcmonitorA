@@ -66,7 +66,8 @@ Future version may provide a means for selecting the parameeter file.
 
 
 Starting the program
-====================
+=====================
+
 The program can be manually executed by running [path]/orrccheck.sh from any directory.
 The currently the config file is "~/.config/orrccheck.d/orrcprams.txt" or prefix_orrcpramx.txt.
 lastused.txt contains the path of the last used prams file. ****

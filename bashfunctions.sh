@@ -3,7 +3,7 @@
 # use by source bashfunctions.sh
 # then invoke the function you want
 #####################################
-
+#
 #>>>>getdatedfilename pre post
 #####################################
 # GLOBALS: outfilename
@@ -11,11 +11,11 @@
 # OUTPUTS: $outfilename  
 # RETURN:
 #
-# the filename is structured as pre_YYYYMMDDHHMMSSpost
+# the filename is structured as preraw_YYYYMMDDHHMMSSpost
 # post needs to include the "." if you are trying for an extension
-
+#
 #####################################
-
+#
 getdatedfilename() {
 
     ## get current date ##
@@ -25,7 +25,7 @@ getdatedfilename() {
     local _outext
 
     _now=$(date +"%Y%m%d%H%M%S")
-    _us="_"
+    _us="raw_"
     _infile=$1
     _outext=$2
 # shellcheck disable=SC2034 #calling shell has exported this
