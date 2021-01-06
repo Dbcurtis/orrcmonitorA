@@ -1,4 +1,7 @@
 #!/bin/bash
+# next two commands see: http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
 # bashfunctions.sh
 # use by source bashfunctions.sh
 # then invoke the function you want

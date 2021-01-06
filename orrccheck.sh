@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 
+# next two commands see: http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+IFS=$'\n\t'
+
 # see; http://ahmed.amayem.com/bash-arrays-3-different-methods-for-copying-an-array/
 # for info on copying arrays
 export topdatadir #why exporting this and mypths?
@@ -11,6 +15,7 @@ source bashfunctions.sh
 
 declare -A mypths  # information about path and if this is the first execution
 declare -A options # information about command line options
+options+=([debugging]=false)
 declare -A dict   # information used when processing
 rsdatedfiles=() # value is set by reversesortfiles
 outfilename=''  # value is set by getdatedfilename
@@ -70,18 +75,28 @@ function printmypth(){
 function keyexists(){
     #
     # use like keyexists 'junk' || echo 'no junk key'
-    # 
+    #
     for k in "${!options[@]}"
-    do 
-        [[ "$1" == "$k" ]] && return 0 
+    do
+        [[ "$1" == "$k" ]] && return 0
     done
     return 1
 }
 
 function checkIfFirstRun(){
     : '
+    sets mypths[firsttime] to 0 (false) or 1(true)
+    dependent on existance of the .config/orrccheck.d directory
+
     test like this
-    ((mypths[firsttime])) && firsttime || notfirsttime 
+    (( mypths[firsttime] )) && firsttime || notfirsttime
+    or more correctly like this
+    if (( mypths[firsttime] ))
+    then
+        firsttime
+    else
+        notfirsttime
+    fi
     '
     local testpath="$HOME/.config/orrccheck.d/"
     if [ -d "$testpath" ]; then
@@ -89,6 +104,81 @@ function checkIfFirstRun(){
     else
         mypths[firsttime]=1  # true
     fi
+}
+
+function setupPaths1(){
+    # shellcheck disable=SC2016
+    : '
+    defines:
+        XDG_CONFIG_HOME
+        XDG_DATA_HOME
+
+    creates:
+        $XDG_CONFIG_HOME/orrccheck.d  --
+        $XDG_CONFIG_HOME/orrccheck.d/lastusedpre.txt --empty file
+        $XDG_DATA_HOME/orrccheck.d  --topdatadir
+
+    sets mypths:
+        topconfigdir
+        lastusedpth
+        topdatadir
+        dlastusedconfig -- initalized with bogus info
+    '
+    if [ -z ${XDG_CONFIG_HOME+x} ]
+    then
+        #echo "var is unset"
+        XDG_CONFIG_HOME="$HOME/.config"
+        export XDG_CONFIG_HOME
+    fi
+    local topconfigdir="$XDG_CONFIG_HOME/orrccheck.d"
+    mypths["topconfigdir"]=$topconfigdir
+    mkdir -p --verbose "$topconfigdir"
+    lastusedpth="$topconfigdir/lastusedpre.txt"
+    mypths["lastusedpth"]="$lastusedpth"
+    [[ -f "$lastusedpth" ]] || touch "$lastusedpth"
+
+    if [ -z ${XDG_DATA_HOME+x} ]
+    then
+        #echo "var is unset"
+        XDG_DATA_HOME="$HOME/.local/share"
+        export XDG_DATA_HOME
+    fi
+    topdatadir="$XDG_DATA_HOME/orrccheck.d"
+    mkdir -p --verbose "$topdatadir"
+    # topdatadir="$pth"
+    mypths[topdatadir]="$topdatadir"
+    mypths[dlastusedconfig]='lkjaslkjflasjfljllk'
+    #printmypth
+}
+
+function setupPaths2(){
+    # shellcheck disable=SC2016
+    : '
+    defines:
+        XDG_CONFIG_HOME
+        XDG_DATA_HOME
+
+    creates:
+        $XDG_CONFIG_HOME/orrccheck.d  --
+        $XDG_CONFIG_HOME/orrccheck.d/lastusedpre.txt --empty file
+        $XDG_DATA_HOME/orrccheck.d  --topdatadir
+
+    sets mypths:
+        dlastusedconfig
+    uses mypths:
+        topconfigdir
+        lastusedpth
+    '
+    #lastusedpth="${mypths[lastusedpth]}"
+    #topdatadir="${mypths[topdatadir]}"
+    #topconfigdir="${mypths[topconfigdir]}"
+    while read -r line
+    do
+        [ -z "$line" ] && continue  # ignore leading blank lines
+        lastusedconfigpth="${mypths[topconfigdir]}/$line"  # take the first non blank line
+        break
+    done < "${mypths[lastusedpth]}"
+    mypths[dlastusedconfig]="$lastusedconfigpth"
 }
 
 function setupPaths(){
@@ -99,53 +189,55 @@ function setupPaths(){
 
     The Data dirctory  is ~/.local/share/orrccheck.d/filepre.d/www.orrc.org/Coordinations/
     which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
-    
-    '
 
-    if [ -z ${XDG_CONFIG_HOME+x} ]
-    then 
-        #echo "var is unset"
-        XDG_CONFIG_HOME="$HOME/.config"
-        export XDG_CONFIG_HOME
-    fi
-    local pth="$XDG_CONFIG_HOME/orrccheck.d"
-    mkdir -p --verbose "$pth"
-    configdir="$pth"
-    lastusedpth="$configdir/lastusedpre.txt"
+    '
+    echo 'should not get here'
+    setupPaths1
+    setupPaths2
+    # if [ -z ${XDG_CONFIG_HOME+x} ]
+    # then
+    #     #echo "var is unset"
+    #     XDG_CONFIG_HOME="$HOME/.config"
+    #     export XDG_CONFIG_HOME
+    # fi
+    # local pth="$XDG_CONFIG_HOME/orrccheck.d"
+    # mkdir -p --verbose "$pth"
+    # configdir="$pth"
+    # lastusedpth="$configdir/lastusedpre.txt"
 
     #echo "lup -> $lastusedpth"
     #printmypth
 
-    mypths["lastusedpth"]="$lastusedpth"
+    # mypths["lastusedpth"]="$lastusedpth"
     # printmypth
     # echo 1
 
-    [[ -f "$lastusedpth" ]] || touch "$lastusedpth"
-    while read -r line
-    do
-        [ -z "$line" ] && continue  # ignore leading blank lines
-        lastusedconfigpth="$pth/$line"  # take the first non blank line
-        break
+    #[[ -f "$lastusedpth" ]] || touch "$lastusedpth"
+    # while read -r line
+    # do
+    #     [ -z "$line" ] && continue  # ignore leading blank lines
+    #     lastusedconfigpth="$pth/$line"  # take the first non blank line
+    #     break
 
-    done < "$lastusedpth"
+    # done < "$lastusedpth"
 
     #echo "lucp -> $lastusedconfigpth"
 
-    mypths[dlastusedconfig]="$lastusedconfigpth"  # if empty, then the config needs to be built
+    #mypths[dlastusedconfig]="$lastusedconfigpth"  # if empty, then the config needs to be built
     # printmypth
     # echo 2
 
 
-    if [ -z ${XDG_DATA_HOME+x} ]
-    then 
-        #echo "var is unset"
-        XDG_DATA_HOME="$HOME/.local/share"
-        export XDG_CONFIG_HOME
-    fi
-    pth="$XDG_DATA_HOME/orrccheck.d"
-    mkdir -p --verbose "$pth"
-    topdatadir="$pth"
-    mypths[topdatadir]="$pth"
+    # if [ -z ${XDG_DATA_HOME+x} ]
+    # then
+    #     #echo "var is unset"
+    #     XDG_DATA_HOME="$HOME/.local/share"
+    #     export XDG_DATA_HOME
+    # fi
+    # pth="$XDG_DATA_HOME/orrccheck.d"
+    # mkdir -p --verbose "$pth"
+    # topdatadir="$pth"
+    # mypths[topdatadir]="$pth"
     #printmypth
 
 }
@@ -181,7 +273,7 @@ function initializeprams(){
 
     function makeconfigfile(){
         printf "%s\n" "initializing config file"
-        read -r -p 'searchstring? ' sstring 
+        read -r -p 'searchstring? ' sstring
         read -r -p 'default file prefix? ' defaultfileprefix
         read -r -p 'max files to keep? ' maxfiles
 
@@ -189,156 +281,22 @@ function initializeprams(){
         configfiletext[9]="maxfiles2keep:$maxfiles"
         configfiletext[15]="searchstring:$sstring"
 
-        echo "check parameter file at: $configfile"   # TOFIX need to update the last used config file 
+        configfile="${mypths[topconfigdir]}/$defaultfileprefix.txt"
+
+        echo "check parameter file at: $configfile"   # TOFIX need to update the last used config file
         printf "%s\n" "${configfiletext[@]}" > "$configfile"    # TOFIX and mark this one as --- more complex than this
+        echo "$configfile" > "${mypths[topconfigdir]}/lastusedpre.txt"
+        mypths[dlastusedconfig]="$configfile"
     }
-    [ ! -r "${mypths[dlastusedconfig]}"  ] && makeconfigfile
+
+    [[ ! -r "${mypths[dlastusedconfig]}"  ]] && makeconfigfile
+
 }
 
 function initializePramsFromNothing(){
-    echo 'first time initialization'
-    setupPaths
+    setupPaths1
     initializeprams
 }
-
-
-function processarguments(){
-
-    function showhelp(){
-        local text=(
-            'command line options and parameters.'
-            './orrccheck.sh -s -d -f fileprefix -e fileprefix -n num -h'
-            ''
-            '-s do not delete any files implies -d and ignores -n val'
-            '-d do not check for identical adjacent files '
-            '-f use fileprefix as a onetime prefix '
-            '-e use fileprefix this time and set as default Not Yet IMPLEMENTED'
-            '-n use num to specify the number of different files to keep and set as default'
-            '-x specify search-for regex with \\ escape characters'
-            '   eg.: input "n6wn\\|ku6y\\|wt6k"  -- overrides the config file'
-            '-r recreate the config file Not Yet IMPLEMENTED'
-            '-h print this'
-            ''
-        )
-        version
-        printf "%s\n" "${text[@]}"
-    }
-
-    function saveall(){
-        num2save -1
-        options+=([saveall]=true)
-    }
-
-    function saveiaf(){
-        options+=([saveiaf]=true)
-    }
-
-    function num2save(){
-        echo "-n NOT COMPLETLY IMPLEMENTED"
-        options+=([num2save]="$1")
-    }
-
-    function onetimeprefix(){
-        options+=([onetimeprefix]="$1")
-    }
-
-    function resetconfigfile(){
-        echo '-r Not Yet IMPLEMENTED' 
-    }
-
-    function setprefix(){
-        echo '-e Not Yet IMPLEMENTED'
-        options+=([setprefix]="$1")
-    }
-
-    function debugging(){
-        echo "hidden debugging command activated"
-        options+=([debugging]='yes')
-    }
-
-    function setextractregex(){
-        options+=([regex]="$1")
-    }
-
-    function usesaved(){
-        echo ' use unchanged saved ' 
-
-    }
-
-    function nousesaved(){
-        echo 'use modified saved ' 
-    }
-
-    : '
-    processarguments starts here
-    '
-    inputargs=("$1")  # these are the command line arguments
-    optionprovided=0 # if it remains 0, then use the default if it exists
-    while getopts "bhsdf:e:n:x:r:" opt $inputargs; do 
-        case $opt in 
-            b)
-                debugging
-            ;;
-            s)
-                saveall
-                saveiaf
-                optionprovided=1
-            ;;
-            d)
-                saveiaf 
-                optionprovided=1
-            ;;
-            f)
-                onetimeprefix "$OPTARG"
-                optionprovided=1
-            ;;
-            e)
-                setprefix "$OPTARG"
-                optionprovided=1
-            ;;
-            n)
-                num2save "$OPTARG"
-                optionprovided=1
-            ;;
-            x)
-                setextractregex "$OPTARG"
-                optionprovided=1
-            ;;
-            r)
-                resetconfigfile "$OPTARG"
-                optionprovided=1
-            ;;
-            h)
-                showhelp
-                exit 1
-            ;;
-            \?)
-                showhelp
-                exit 1
-            ;;
-        esac
-    done
-    ((optionprovided)) && nousesaved || usesaved
-    
-    function fixargs(){
-        # to resolve conflicting selected options
-        keyexists 'saveall' && num2save -1
-    }
-    fixargs
-
-}
-: '
-##################
-Execution starts here
-################
-'
-checkIfFirstRun
-setupPaths
-((mypths[firsttime])) && initializePramsFromNothing #|| notfirsttime 
-
-list=$@
-processarguments "$list"
-initializeprams
 
 function amIdebugging(){
     : '
@@ -356,6 +314,176 @@ function amIdebugging(){
     fi
 }
 
+function processarguments(){
+
+    function showhelp(){
+        local text=(
+            'command line options and parameters.'
+            './orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix'
+            '-h print this'
+            '-l list available prefixes'
+            '-s do not delete any files implies -d'
+            '-d do not check for identical adjacent files '
+            '-x create new prefix'
+            '-p persist this reading'
+            '-u use an existing prefix onetime '
+            '-c set prefix as new default prefix'
+            ''
+        )
+        version
+        printf "%s\n" "${text[@]}"
+    }
+
+    function saveall(){
+        #num2save -1
+        options+=([saveall]=true)
+    }
+
+    function saveiaf(){
+        options+=([saveiaf]=true)
+    }
+
+    function num2save(){
+        echo "-n NOT COMPLETLY IMPLEMENTED"
+        options+=([num2save]="$1")
+    }
+
+    function createnewprefix(){
+        echo '************** -x not yet implemented ***********'
+
+    }
+
+    function useexistingprefix(){
+        echo '************** -u not yet implemented ***********'
+
+    }
+
+    function setprefix(){
+        echo '-e Not Yet IMPLEMENTED'
+        options+=([setprefix]="$1")
+    }
+
+    function debugging(){
+        echo "hidden debugging command activated"
+        options+=([debugging]='yes')
+    }
+
+    function setextractregex(){
+        options+=([regex]="$1")
+    }
+
+    function usesaved(){
+        echo ' use unchanged saved '
+
+    }
+
+    function nousesaved(){
+        echo 'use modified saved '
+    }
+
+    : '
+    ###########################
+    processarguments starts here
+    '
+    inputargs=("$1")  # these are the command line arguments
+    options+=([modtosaved]=false)
+    options+=([changeconfig]=false)
+    modtosaved=false # if it remains 0, then use the default 
+    changeconfig=false # if it 
+    echo 'start of getopts'
+    # shellcheck disable=SC2128
+    # shellcheck disable=SC2086
+    #-h -s -d -x -p -u prefix'
+    while getopts "bhsdlxpu:c:" opt $inputargs; do
+        case $opt in
+            b)
+                debugging
+            ;;
+            s)
+                # -s do not delete any files implies -d and ignores -n val
+                saveall
+                saveiaf
+                modtosaved=true
+            ;;
+            d)
+                # -d do not check for identical adjacent files 
+                saveiaf
+                #modtosaved=1
+            ;;
+            l)
+                echo '************* -l not yet implemented ******'
+            ;;
+            c)
+                echo '************* -c not yet implemented ******'
+            ;;
+            u)
+                # -f use an existing fileprefix as a onetime prefix 
+                useexistingprefix "$OPTARG"
+                modtosaved=true
+            ;;
+            x)
+                createnewprefix
+                changeconfig=true
+            ;;
+            p)
+                echo '************* -p not yet implemented ******'
+            ;;
+            h)
+                showhelp
+                exit 1
+            ;;
+            \?)
+                showhelp
+                exit 1
+            ;;
+        esac
+    done
+    echo 'end of gitops'
+
+    # function fixargs(){
+    # #     # to resolve conflicting selected options
+    # #     keyexists 'saveall' && num2save -1
+    #     echo 'in fixargs'
+    # }
+    # fixargs
+
+    options[modtosaved]="$modtosaved"
+    options[changeconfig]="$changeconfig"
+
+    if amIdebugging
+    then    
+        printOptions
+    fi
+    
+    if [[ "${options[modtosaved]}" == true ]]
+    then
+        nousesaved
+    else
+        usesaved
+    fi
+    exit
+
+
+
+}
+: '
+##################
+Execution starts here
+################
+'
+
+checkIfFirstRun
+if ((mypths[firsttime]))
+then
+        initializePramsFromNothing
+else
+        echo 'setupPaths'
+fi
+# setupPaths
+# ((mypths[firsttime])) && initializePramsFromNothing #|| notfirsttime
+
+list=$*
+processarguments "$list"
 
 if amIdebugging; then
     printOptions
@@ -412,12 +540,14 @@ fi
 
     The Data dirctory  is ~/.local/share/orrccheck.d/filepre.d/www.orrc.org/Coordinations/
     which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
-    
+
     '
 
 # the dated file name is of the form $fileprefixraw_YYYYMMDDHHMMSS.txt
+echo 1
 cd "$topdatadir" || exit 48
 prefdatadir="$fileprefix.d"
+echo 2
 cd "$prefdatadir" || exit 50
 
 wget -p http://www.orrc.org/Coordinations/Published
@@ -433,7 +563,7 @@ cd Coordinations/ || exit 60  # do need data in Coordinations
     and making the <tr>...</tr> obvious
     dump to the dated file name from outfilename
 '
-
+echo 3
 grep -i "${dict['searchstring']}" Published | \
 sed 's#</td><td#</td>\n<td#g' | \
 sed 's#</tr>#\n</tr>\n<tr>#' | \
@@ -453,14 +583,14 @@ then
     if amIdebugging; then
         echo "current file is: $outfilename"
         echo "removing Published dir"
-    fi    
+    fi
     rm Published   # if the most current file is the one we expect, delete Published
     #
     # check if there was a change between the last file and the current file
     #
-    if  diff "$outfilename" "${rsdatedfiles[1]}" > /dev/null 
+    if  diff "$outfilename" "${rsdatedfiles[1]}" > /dev/null
     then
-        if canIdeletefiles; then          
+        if canIdeletefiles; then
             echo "removing older identical file ${rsdatedfiles[1]}"
             rm -i "${rsdatedfiles[1]}"   # deleating the older identical file
         fi
@@ -478,17 +608,17 @@ fi
 
 reversesortfiles "$arg"  # do it again as one file may have been deleated
 
-if canIdeletefiles; then          
+if canIdeletefiles; then
     printdatedfiles "purging adjacent duplicates from history of changes "
     len=${#rsdatedfiles[@]}
     declare -a toB_deleated
     toB_deleated=()
 
     for (( i=1; i<len; i++ )); do # find duplicate file contents mark for deletion
-        if  diff "${rsdatedfiles[$i-1]}" "${rsdatedfiles[$i]}" > /dev/null 
-        then 
+        if  diff "${rsdatedfiles[$i-1]}" "${rsdatedfiles[$i]}" > /dev/null
+        then
             toB_deleated+=("${rsdatedfiles[$i]}")
-        fi 
+        fi
     done
 
     printf "\n##############\n%s\n############\n" "adjacent duplicates to be deleated"
@@ -498,9 +628,9 @@ if canIdeletefiles; then
     for f in "${toB_deleated[@]}"; do rm -i "$f" ;done
 fi
 
-reversesortfiles "$arg" 
+reversesortfiles "$arg"
 len=${#rsdatedfiles[@]}
-if canIdeletefiles; then 
+if canIdeletefiles; then
     max="${dict[maxfiles2keep]}"
     printdatedfiles "saved files"
     if [[ $len -ge $max ]]; then
