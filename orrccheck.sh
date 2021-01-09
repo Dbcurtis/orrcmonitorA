@@ -1,4 +1,8 @@
 #!/usr/bin/bash
+: 'Copyright (c) 2021 by Daniel B. Curtis
+  usage is per the GNU GENERAL PUBLIC LICENSE Version 3
+  which has been distributed herewith.
+'
 
 # next two commands see: http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -euo pipefail
@@ -8,6 +12,7 @@ IFS=$'\n\t'
 # for info on copying arrays
 export topdatadir #why exporting this and mypths?
 export mypths
+
 # shellcheck source=/dev/null
 source genpramdic.sh
 # shellcheck source=/dev/null
@@ -15,10 +20,12 @@ source bashfunctions.sh
 
 declare -A mypths  # information about path and if this is the first execution
 declare -A options # information about command line options
+
 options+=([debugging]=false)
 declare -A dict   # information used when processing
 rsdatedfiles=() # value is set by reversesortfiles
 outfilename=''  # value is set by getdatedfilename
+
 
 # Name of the script
 SCRIPT=$( basename "$0" )
@@ -60,6 +67,10 @@ function printdict(){
         printf "\t%s\n" "${i} => ${dict[$i]}"
     done
     echo ""
+}
+function getdefaultprepath(){
+    echo "${mypths[dlastusedconfig]}"
+
 }
 
 function printmypth(){
@@ -130,11 +141,29 @@ function setupPaths1(){
         XDG_CONFIG_HOME="$HOME/.config"
         export XDG_CONFIG_HOME
     fi
-    local topconfigdir="$XDG_CONFIG_HOME/orrccheck.d"
+    local topconfigdir
+    local lastusedconfigpth
+    local lastusedpth
+    local topdatadir
+
+    topconfigdir="$XDG_CONFIG_HOME/orrccheck.d"
     mypths["topconfigdir"]=$topconfigdir
     mkdir -p --verbose "$topconfigdir"
     lastusedpth="$topconfigdir/lastusedpre.txt"
     mypths["lastusedpth"]="$lastusedpth"
+    if [[ -f "$lastusedpth" ]]
+    then
+        while read -r line
+            do
+                [ -z "$line" ] && continue  # ignore leading blank lines
+                lastusedconfigpth="${mypths[topconfigdir]}/$line"  # take the first non blank line
+                break
+            done < "${mypths[lastusedpth]}"
+            mypths[dlastusedconfig]="$lastusedconfigpth"
+    else
+        touch "$lastusedpth"
+        mypths[dlastusedconfig]=''
+    fi
     [[ -f "$lastusedpth" ]] || touch "$lastusedpth"
 
     if [ -z ${XDG_DATA_HOME+x} ]
@@ -145,9 +174,8 @@ function setupPaths1(){
     fi
     topdatadir="$XDG_DATA_HOME/orrccheck.d"
     mkdir -p --verbose "$topdatadir"
-    # topdatadir="$pth"
     mypths[topdatadir]="$topdatadir"
-    mypths[dlastusedconfig]='lkjaslkjflasjfljllk'
+    #mypths[dlastusedconfig]='lkjaslkjflasjfljllk'
     #printmypth
 }
 
@@ -184,61 +212,17 @@ function setupPaths2(){
 function setupPaths(){
     : '
     The configuration directory is ~/.config/orrccheck.d
-    it contains a file /filepre.txt --for each default prefix
-    it also contains /lastusedpre.txt that contains one line which is the filepre.txt name of the last one used.
+    it contains a file /prefix.txt --for each prefix
+    it also contains /lastusedpre.txt that contains one line which is the prefix.txt name of the last prefix used.
 
-    The Data dirctory  is ~/.local/share/orrccheck.d/filepre.d/www.orrc.org/Coordinations/
+    The Data dirctory is ~/.local/share/orrccheck.d/prefix.d/www.orrc.org/Coordinations/
     which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
 
     '
     echo 'should not get here'
     setupPaths1
     setupPaths2
-    # if [ -z ${XDG_CONFIG_HOME+x} ]
-    # then
-    #     #echo "var is unset"
-    #     XDG_CONFIG_HOME="$HOME/.config"
-    #     export XDG_CONFIG_HOME
-    # fi
-    # local pth="$XDG_CONFIG_HOME/orrccheck.d"
-    # mkdir -p --verbose "$pth"
-    # configdir="$pth"
-    # lastusedpth="$configdir/lastusedpre.txt"
-
-    #echo "lup -> $lastusedpth"
-    #printmypth
-
-    # mypths["lastusedpth"]="$lastusedpth"
-    # printmypth
-    # echo 1
-
-    #[[ -f "$lastusedpth" ]] || touch "$lastusedpth"
-    # while read -r line
-    # do
-    #     [ -z "$line" ] && continue  # ignore leading blank lines
-    #     lastusedconfigpth="$pth/$line"  # take the first non blank line
-    #     break
-
-    # done < "$lastusedpth"
-
-    #echo "lucp -> $lastusedconfigpth"
-
-    #mypths[dlastusedconfig]="$lastusedconfigpth"  # if empty, then the config needs to be built
-    # printmypth
-    # echo 2
-
-
-    # if [ -z ${XDG_DATA_HOME+x} ]
-    # then
-    #     #echo "var is unset"
-    #     XDG_DATA_HOME="$HOME/.local/share"
-    #     export XDG_DATA_HOME
-    # fi
-    # pth="$XDG_DATA_HOME/orrccheck.d"
-    # mkdir -p --verbose "$pth"
-    # topdatadir="$pth"
-    # mypths[topdatadir]="$pth"
-    #printmypth
+   
 
 }
 
@@ -316,26 +300,8 @@ function amIdebugging(){
 
 function processarguments(){
 
-    function showhelp(){
-        local text=(
-            'command line options and parameters.'
-            './orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix'
-            '-h print this'
-            '-l list available prefixes'
-            '-s do not delete any files implies -d'
-            '-d do not check for identical adjacent files '
-            '-x create new prefix'
-            '-p persist this reading'
-            '-u use an existing prefix onetime '
-            '-c set prefix as new default prefix'
-            ''
-        )
-        version
-        printf "%s\n" "${text[@]}"
-    }
 
     function saveall(){
-        #num2save -1
         options+=([saveall]=true)
     }
 
@@ -343,19 +309,19 @@ function processarguments(){
         options+=([saveiaf]=true)
     }
 
-    function num2save(){
-        echo "-n NOT COMPLETLY IMPLEMENTED"
-        options+=([num2save]="$1")
-    }
+    # function num2save(){
+    #     echo "-n NOT COMPLETLY IMPLEMENTED"
+    #     options+=([num2save]="$1")
+    # }
 
     function createnewprefix(){
+        prefix="$1"
         echo '************** -x not yet implemented ***********'
-
     }
 
     function useexistingprefix(){
+        prefix=$1
         echo '************** -u not yet implemented ***********'
-
     }
 
     function setprefix(){
@@ -372,29 +338,153 @@ function processarguments(){
         options+=([regex]="$1")
     }
 
+    function getprefixInfo(){
+        topconfigdir="${mypths[topconfigdir]}"
+        if [[ -e "$topconfigdir" && -r "$topconfigdir" && -d "$topconfigdir" ]] 
+        then
+            getprefixnames  "$topconfigdir" "$1"
+        fi
+    }
+
+    function listPrefixInfo(){
+        local -a prefixs
+        local defprefixpth
+        local defprefix 
+        local cnt
+        local idx
+
+        getprefixInfo prefixs 
+        cnt=${#prefixs[@]}
+        idx=0
+        defprefixpth="$(getdefaultprepath)"
+        defprefix="$(basename -s .txt $defprefixpth)"
+        printf "\n%s\n\n%s\n" "Default prefix is $defprefix" 'Known prefixs are:'
+        while [[ idx -lt cnt ]]; do
+            for (( i=0; i<4; i++)); do
+                printf "%s\t" "${prefixs[$idx]}"
+                (( idx=idx+1 ))
+                [[ idx -ge cnt ]] && break
+            done
+            printf "\n"
+        done
+        printf "\n"
+
+      
+    }
+    function locatePrefixInfo(){
+        local -a junk
+    }
+
+    function removePrefix(){
+        local -a prefixlist
+        #local -A prefixdir
+        getprefixInfo "$prefixlist"
+        local cnt=${#prefixlist[@]}
+        local toberemoved="$1"
+        for prefix in "${prefixlist[@]}"; do
+            [[ $toberemoved == "$prefix" ]] && break
+        done
+        echo "$prefix found"
+        locatePrefixInfo "$toberemoved"  
+        remove "$prefix"
+    }
+
+    function deleteprefix(){
+        prefix2delete="$1"
+
+        local -A pre2Path
+        local -a prefixs
+        getprefixInfo prefixs
+
+        
+        #shopt -s nocasematch
+        #shopt -u nocasematch
+        
+        # prefix2delete="$1"
+        # local -a prefixlist
+        # getprefixInfo "$prefixlist"
+        target="not"
+        for prefix in "${prefixs[@]}"; do
+            if [[ "$prefix2delete" == "$prefix" ]]; then
+                target=$prefix2delete
+                break
+            fi
+        done
+        #shopt -u nocasematch
+        echo "$target found"
+        filesa="$( find "$topconfigdir" -maxdepth 1 -type f -iregex ".*$target.txt"  )"
+        echo "$filesa"
+        pre2Path["$target"]="$filesa"
+        defp="${mypths[dlastusedconfig]}"
+        if [[ -e "$defp" && -r "$defp" && -f "$defp" && -s $defp ]]
+        then
+            echo "not done"
+        fi 
+
+        exit
+        echo '************* -z not yet implemented ******'
+        # find files that will be affected
+        #list for the user
+        # get ok to delete
+        #delete
+        local response
+        echo "the following files/directories will be deleted..."
+        
+        read -pr "are you sure(Y/n)?: " response
+        
+        if [[ $response =~ ^[Yy].* ]] 
+        then 
+            removePrefix "$prefix"
+        fi
+    }
+
+    function persistthisreading(){
+        echo '************* -p not yet implemented ******'
+        options+=([persist]=true)
+    }
+
     function usesaved(){
         echo ' use unchanged saved '
-
     }
 
     function nousesaved(){
         echo 'use modified saved '
     }
 
+    function showhelp(){
+        local text=(
+            'command line options and parameters.'
+            './orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix -z prefix'
+            '-h print this'
+            '-l list existing prefixes'
+            '-s do not delete any files implies -d'
+            '-d do not check for identical adjacent files '
+            '-x create new prefix (no white space)'
+            '-p persist this reading'
+            '-u use an existing prefix onetime '
+            '-c set prefix as new default prefix'
+            '-z delete the prefix file from .config, and the corrosponding data files'
+            ''
+        )
+        version
+        printf "%s\n" "${text[@]}"
+    }
+
     : '
     ###########################
     processarguments starts here
     '
+
     inputargs=("$1")  # these are the command line arguments
     options+=([modtosaved]=false)
     options+=([changeconfig]=false)
     modtosaved=false # if it remains 0, then use the default 
     changeconfig=false # if it 
-    echo 'start of getopts'
+    #echo 'start of getopts'
     # shellcheck disable=SC2128
     # shellcheck disable=SC2086
-    #-h -s -d -x -p -u prefix'
-    while getopts "bhsdlxpu:c:" opt $inputargs; do
+    #./orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix -z prefix
+    while getopts "bhsdlxpu:c:z:" opt $inputargs; do
         case $opt in
             b)
                 debugging
@@ -408,10 +498,14 @@ function processarguments(){
             d)
                 # -d do not check for identical adjacent files 
                 saveiaf
-                #modtosaved=1
             ;;
             l)
-                echo '************* -l not yet implemented ******'
+                #working
+                if amIdebugging; then    
+                    printmypth
+                fi
+                listPrefixInfo
+                exit 0
             ;;
             c)
                 echo '************* -c not yet implemented ******'
@@ -422,15 +516,19 @@ function processarguments(){
                 modtosaved=true
             ;;
             x)
-                createnewprefix
+                createnewprefix "$OPTARG"
                 changeconfig=true
             ;;
-            p)
-                echo '************* -p not yet implemented ******'
+            p)               
+                persistthisreading
+            ;;
+            z)
+                deleteprefix "$OPTARG"
+                modtosaved=true
             ;;
             h)
                 showhelp
-                exit 1
+                exit 0
             ;;
             \?)
                 showhelp
@@ -438,7 +536,7 @@ function processarguments(){
             ;;
         esac
     done
-    echo 'end of gitops'
+    #echo 'end of gitops'
 
     # function fixargs(){
     # #     # to resolve conflicting selected options
@@ -463,8 +561,6 @@ function processarguments(){
     fi
     exit
 
-
-
 }
 : '
 ##################
@@ -475,9 +571,11 @@ Execution starts here
 checkIfFirstRun
 if ((mypths[firsttime]))
 then
+        echo 'first time initialization'
         initializePramsFromNothing
 else
-        echo 'setupPaths'
+        #echo 'setupPaths'
+        setupPaths1
 fi
 # setupPaths
 # ((mypths[firsttime])) && initializePramsFromNothing #|| notfirsttime
@@ -519,6 +617,7 @@ function canIdeletefiles(){
 keyexists 'regex' && dict+=([searchstring]=${options[regex]})
 keyexists 'num2save' && dict+=([maxfiles2keep]=${options[num2save]})
 keyexists 'onetimeprefix' && dict+=([deffilepre]=${options[onetimeprefix]})
+keyexists 'persist' && dict+=([persist]=${options[persist]})
 
 if amIdebugging; then
     printdict
@@ -535,15 +634,15 @@ fi
 
     : '
     The configuration directory is ~/.config/orrccheck.d
-    it contains a file /filepre.txt --for each default prefix
-    it also contains /lastusedpre.txt that contains one line which is the filepre.txt name of the last one used.
+    it contains a file /prefix.txt --for each defined prefix
+    it also contains /lastusedpre.txt that contains one line which is the prefix.txt path to the last prefix used.
 
-    The Data dirctory  is ~/.local/share/orrccheck.d/filepre.d/www.orrc.org/Coordinations/
+    The Data dirctory  is ~/.local/share/orrccheck.d/prefix.d/www.orrc.org/Coordinations/
     which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
 
     '
 
-# the dated file name is of the form $fileprefixraw_YYYYMMDDHHMMSS.txt
+# the dated file name is of the form $prefixraw_YYYYMMDDHHMMSS.txt
 echo 1
 cd "$topdatadir" || exit 48
 prefdatadir="$fileprefix.d"
