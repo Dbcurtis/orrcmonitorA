@@ -68,9 +68,13 @@ function printdict(){
     done
     echo ""
 }
+
 function getdefaultprepath(){
     echo "${mypths[dlastusedconfig]}"
+}
 
+function gettopdatadir(){
+    echo "${mypths[topdatadir]}"
 }
 
 function printmypth(){
@@ -222,7 +226,6 @@ function setupPaths(){
     echo 'should not get here'
     setupPaths1
     setupPaths2
-   
 
 }
 
@@ -353,11 +356,11 @@ function processarguments(){
         local cnt
         local idx
 
-        getprefixInfo prefixs 
+        getprefixInfo prefixs # get known prefixs
         cnt=${#prefixs[@]}
         idx=0
         defprefixpth="$(getdefaultprepath)"
-        defprefix="$(basename -s .txt $defprefixpth)"
+        defprefix="$(basename -s .txt $defprefixpth)" # get default prefix
         printf "\n%s\n\n%s\n" "Default prefix is $defprefix" 'Known prefixs are:'
         while [[ idx -lt cnt ]]; do
             for (( i=0; i<4; i++)); do
@@ -368,9 +371,8 @@ function processarguments(){
             printf "\n"
         done
         printf "\n"
-
-      
     }
+
     function locatePrefixInfo(){
         local -a junk
     }
@@ -390,52 +392,74 @@ function processarguments(){
     }
 
     function deleteprefix(){
-        prefix2delete="$1"
-
-        local -A pre2Path
+        local prefix2delete
         local -a prefixs
-        getprefixInfo prefixs
+        local defprefixpth
+        local defprefix 
+        local cnt
+        local idx
+        local -A pre2Path
+        local prefix
+        local config2delete
+        local datadir2delete
+        local target
+        local userresponse
 
-        
-        #shopt -s nocasematch
-        #shopt -u nocasematch
-        
-        # prefix2delete="$1"
-        # local -a prefixlist
-        # getprefixInfo "$prefixlist"
+        getprefixInfo prefixs # get known prefixs
+
+        prefix2delete="$1"
+        defprefixpth="$(getdefaultprepath)"
+        defprefix="$(basename -s .txt $defprefixpth)" # get default prefix
+        if [[ $defprefix == $prefix2delete ]]; then    # cannot delete default prefix
+            printf "\nCannot delete default prefix %s." "$defprefix"
+            listPrefixInfo
+            exit 0
+        fi 
+
         target="not"
-        for prefix in "${prefixs[@]}"; do
+        for prefix in "${prefixs[@]}"; do # try to find requsted prefix in known list
             if [[ "$prefix2delete" == "$prefix" ]]; then
                 target=$prefix2delete
                 break
             fi
         done
-        #shopt -u nocasematch
-        echo "$target found"
-        filesa="$( find "$topconfigdir" -maxdepth 1 -type f -iregex ".*$target.txt"  )"
-        echo "$filesa"
-        pre2Path["$target"]="$filesa"
-        defp="${mypths[dlastusedconfig]}"
-        if [[ -e "$defp" && -r "$defp" && -f "$defp" && -s $defp ]]
-        then
-            echo "not done"
-        fi 
-
-        exit
-        echo '************* -z not yet implemented ******'
-        # find files that will be affected
-        #list for the user
-        # get ok to delete
-        #delete
-        local response
-        echo "the following files/directories will be deleted..."
         
-        read -pr "are you sure(Y/n)?: " response
-        
-        if [[ $response =~ ^[Yy].* ]] 
-        then 
-            removePrefix "$prefix"
+        if [[ $target == 'not' ]]; then # not found, print list, end
+            echo "Supplied prefix:$prefix2delete not found"
+            listPrefixInfo
+            exit 0
         fi
+        datadir2dlete='not found'
+        config2delete='not found'
+        config2delete="$( find "$topconfigdir" -maxdepth 1 -type f -regex ".*$target.txt"  )"  
+        datadir2dlete="$(gettopdatadir)/$target.d"
+        
+        if amIdebugging; then    
+            echo "$target found"
+            echo "config to delete: $config2delete"
+            echo "datadir to delete: $datadir2dlete"; fi
+        
+        function dodelete(){
+            # printf "\nDeleting prefix %s at %s\n" "$target" "$config2delete"
+            # printf "Deleting prefix %s data at %s\n\n" "$target" "$datadir2dlete"
+            rm -v "$config2delete"
+            rm -rv "$datadir2dlete"
+            echo "done"
+        }
+        printf "\n\nDo you want to delete?:\n\t%s/* and\n\t%s\n" "$config2delete" "$datadir2dlete"
+        printf "If you delete these, there is no backup... Be sure..."
+        read -p 'OK to delete these files(Y/N)' userresponse
+
+        if [[ "$userresponse" =~ ^[Yy].* ]]
+        then 
+            dodelete
+            listPrefixInfo
+            exit 0
+        else
+            echo 'Prefix Delete aborted...'
+            exit 0
+        fi
+        exit 0
     }
 
     function persistthisreading(){
@@ -501,9 +525,9 @@ function processarguments(){
             ;;
             l)
                 #working
-                if amIdebugging; then    
-                    printmypth
-                fi
+                if amIdebugging; then  
+                    printmypth ;fi
+                
                 listPrefixInfo
                 exit 0
             ;;
@@ -523,8 +547,10 @@ function processarguments(){
                 persistthisreading
             ;;
             z)
+                if amIdebugging; then    
+                    printmypth; fi
                 deleteprefix "$OPTARG"
-                modtosaved=true
+                exit 0
             ;;
             h)
                 showhelp

@@ -69,7 +69,7 @@ reversesortfiles() {
  GLOBALS:  
  ARGUMENTS: pth: the path to look for the prefix files usually ~.config/orrccheck.d
             resultarray: an array to store the results in
- OUTPUTS:   fills the resultarray
+ OUTPUTS:   fills the resultarray with the prefixs 
  RETURN: 
 
  Example use:
@@ -96,16 +96,8 @@ function getprefixnames(){
 
     filesa="$( find "$topconfigdir" -maxdepth 1 -type f -iregex ".*[.]txt"  )"
     for f in $filesa; do 
-        [[ "$f" != *"lastusedpre"* ]] && files+=("$f"); done
+        [[ "$f" != *"lastusedpre"* ]] && files+=("$f"); done # drop the lastusedpre.txt file
     
-    # #declare -A prefix2path
-    # if [[ "$__resultvar" ]]; then
-    #   for f in "${files[@]}"; do
-    #       name=$(basename -s .txt $f)
-    #       __prefix2path[$name]=$f
-          
-    #   done
-    # fi
     result=$(basename -as .txt ${files[*]}) # result is a string  
     arr=($result)   
     readarray -t arr_s < <(printf '%s\n' "${arr[@]}" | sort)
