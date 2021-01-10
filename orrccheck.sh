@@ -327,6 +327,37 @@ function processarguments(){
         echo '************** -u not yet implemented ***********'
     }
 
+    function setnewdefaultprfix(){
+        local newdefaultpre
+
+        local -a prefixs
+        local defprefixpth
+        local defprefix 
+        local cnt
+        local idx
+        local prefix
+        local config2delete
+        local target
+        local userresponse
+
+        newdefaultpre="$1"
+        getprefixInfo prefixs # get known prefixs
+        defprefixpth="$(getdefaultprepath)"
+        defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
+        if [[ $defprefix == "$prefix2delete" ]]; then    # cannot delete default prefix
+            printf "\nCannot delete default prefix %s." "$defprefix"
+            listPrefixInfo
+            exit 0
+        fi
+
+        # check the prefix is known
+        # if the current default is not set, then just set it, otherwise
+        # check it is not already the default prefix
+        # tell changing existing prefix to new prefix
+        # change it
+        echo '************* -c not yet implemented ******'
+    }
+
     function setprefix(){
         echo '-e Not Yet IMPLEMENTED'
         options+=([setprefix]="$1")
@@ -360,7 +391,7 @@ function processarguments(){
         cnt=${#prefixs[@]}
         idx=0
         defprefixpth="$(getdefaultprepath)"
-        defprefix="$(basename -s .txt $defprefixpth)" # get default prefix
+        defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
         printf "\n%s\n\n%s\n" "Default prefix is $defprefix" 'Known prefixs are:'
         while [[ idx -lt cnt ]]; do
             for (( i=0; i<4; i++)); do
@@ -373,23 +404,23 @@ function processarguments(){
         printf "\n"
     }
 
-    function locatePrefixInfo(){
-        local -a junk
-    }
+    # function locatePrefixInfo(){
+    #     local -a junk
+    # }
 
-    function removePrefix(){
-        local -a prefixlist
-        #local -A prefixdir
-        getprefixInfo "$prefixlist"
-        local cnt=${#prefixlist[@]}
-        local toberemoved="$1"
-        for prefix in "${prefixlist[@]}"; do
-            [[ $toberemoved == "$prefix" ]] && break
-        done
-        echo "$prefix found"
-        locatePrefixInfo "$toberemoved"  
-        remove "$prefix"
-    }
+    # function removePrefix(){
+    #     local -a prefixlist
+    #     #local -A prefixdir
+    #     getprefixInfo "$prefixlist"
+    #     local cnt=${#prefixlist[@]}
+    #     local toberemoved="$1"
+    #     for prefix in "${prefixlist[@]}"; do
+    #         [[ $toberemoved == "$prefix" ]] && break
+    #     done
+    #     echo "$prefix found"
+    #     locatePrefixInfo "$toberemoved"  
+    #     remove "$prefix"
+    # }
 
     function deleteprefix(){
         local prefix2delete
@@ -398,19 +429,16 @@ function processarguments(){
         local defprefix 
         local cnt
         local idx
-        local -A pre2Path
         local prefix
         local config2delete
-        local datadir2delete
         local target
         local userresponse
 
         getprefixInfo prefixs # get known prefixs
-
         prefix2delete="$1"
         defprefixpth="$(getdefaultprepath)"
-        defprefix="$(basename -s .txt $defprefixpth)" # get default prefix
-        if [[ $defprefix == $prefix2delete ]]; then    # cannot delete default prefix
+        defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
+        if [[ $defprefix == "$prefix2delete" ]]; then    # cannot delete default prefix
             printf "\nCannot delete default prefix %s." "$defprefix"
             listPrefixInfo
             exit 0
@@ -437,8 +465,9 @@ function processarguments(){
         if amIdebugging; then    
             echo "$target found"
             echo "config to delete: $config2delete"
-            echo "datadir to delete: $datadir2dlete"; fi
-        
+            echo "datadir to delete: $datadir2dlete"
+        fi
+                
         function dodelete(){
             # printf "\nDeleting prefix %s at %s\n" "$target" "$config2delete"
             # printf "Deleting prefix %s data at %s\n\n" "$target" "$datadir2dlete"
@@ -446,18 +475,16 @@ function processarguments(){
             rm -rv "$datadir2dlete"
             echo "done"
         }
+
         printf "\n\nDo you want to delete?:\n\t%s/* and\n\t%s\n" "$config2delete" "$datadir2dlete"
         printf "If you delete these, there is no backup... Be sure..."
-        read -p 'OK to delete these files(Y/N)' userresponse
-
+        read -p -r 'OK to delete these files(Y/N)' userresponse
         if [[ "$userresponse" =~ ^[Yy].* ]]
         then 
             dodelete
             listPrefixInfo
-            exit 0
         else
             echo 'Prefix Delete aborted...'
-            exit 0
         fi
         exit 0
     }
@@ -524,15 +551,14 @@ function processarguments(){
                 saveiaf
             ;;
             l)
-                #working
-                if amIdebugging; then  
-                    printmypth ;fi
-                
+                #working               
                 listPrefixInfo
                 exit 0
             ;;
             c)
-                echo '************* -c not yet implemented ******'
+                setnewdefaultprfix "$OPTARG"
+                exit 0
+                
             ;;
             u)
                 # -f use an existing fileprefix as a onetime prefix 
