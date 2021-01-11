@@ -49,6 +49,18 @@ function printdatedfiles(){
     done
 }
 
+function setdefault(){
+    # get path to $1
+    # put that path into lastusedpth
+    local pretoset
+    local prepath
+
+    pretoset=$1
+    prepath="${mypths[topconfigdir]}/$pretoset.txt"
+    echo "$prepath" > "${mypths[lastusedpth]}"
+    printmypth
+}
+
 function printOptions(){
     echo 'in options is:'
     local i
@@ -312,10 +324,6 @@ function processarguments(){
         options+=([saveiaf]=true)
     }
 
-    # function num2save(){
-    #     echo "-n NOT COMPLETLY IMPLEMENTED"
-    #     options+=([num2save]="$1")
-    # }
 
     function createnewprefix(){
         local prefix="$1"
@@ -326,11 +334,9 @@ function processarguments(){
         local cnt
         local idx
         local temp
+        local datapath
         
         getprefixInfo prefixs # get known prefixs
-
-
-
 
         for temp in "${prefixs[@]}"; do 
             if [[ "$temp" == "$prefix" ]]; then
@@ -340,13 +346,9 @@ function processarguments(){
         done
         
         datapth="$(gettopdatadir)/$prefix.d/"
-
-        echo "mkdir -pv $datapth"
+        mkdir -pv "$datapth"
         makeconfigfile
-
         exit 0
-
-        echo '************** -x not yet implemented ***********'
     }
 
     function useexistingprefix(){
@@ -373,7 +375,9 @@ function processarguments(){
         print
         defprefixpth="$(getdefaultprepath)"
         existingprefs='false'
-        printmypth
+        if amIdebugging; then
+            printmypth
+        fi
 
         for pf in "${prefixs[@]}"; do    # check if requested prefix exists
             if [[ "$pf" == "$newdefaultpre" ]]; then 
@@ -392,29 +396,22 @@ function processarguments(){
         if [[ -z "$defprefix" ]]
         then # no existing default so just set request to default
             echo 'INFO: no existing default'
+            setdefault "$newdefaultpre" 
+            listPrefixInfo
+            exit 0
 
-
-        else 
-            echo 'placeholder'
         fi 
 
-        exit 0
-
         if [[ $defprefix == "$newdefaultpre" ]]; then    # cannot delete default prefix
-            printf "\nCannot replace the default prefix with its self. Specified %s.\n" "$defprefix"
+            #printf "\nCannot replace the default prefix with its self. Specified %s.\n" "$defprefix"
             listPrefixInfo
             exit 0
         fi
 
-
-
+        printf '\nreplacing default of %s with %s\n' "$defprefix" "$newdefaultpre"
+        setdefault "$newdefaultpre" 
+        listPrefixInfo
         exit 0
-        # check the prefix is known
-        # if the current default is not set, then just set it, otherwise
-        # check it is not already the default prefix
-        # tell changing existing prefix to new prefix
-        # change it
-        echo '************* -c not yet implemented ******'
     }
 
     function setprefix(){
@@ -446,12 +443,20 @@ function processarguments(){
         local cnt
         local idx
 
+        setupPaths1 # get the current path info
         getprefixInfo prefixs # get known prefixs
         cnt=${#prefixs[@]}
         idx=0
         defprefixpth="$(getdefaultprepath)"
-        defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
-        printf "\n%s\n\n%s\n" "Default prefix is $defprefix" 'Known prefixs are:'
+        echo "mark $defprefixpth"
+        if [[ -z $defprefixpth  ]]
+        then
+            defprefix='No Default selected use the -c option to select one of the following known prefixes.'
+        else
+            defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
+        fi 
+        #defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
+        printf "\n%s\n\n%s\n" "Default prefix is: $defprefix" 'Known prefixes are:'
         while [[ idx -lt cnt ]]; do
             for (( i=0; i<4; i++)); do
                 printf "%s\t" "${prefixs[$idx]}"
@@ -473,7 +478,7 @@ function processarguments(){
         local idx
         local prefix
         local config2delete
-        local datadir2dlete
+        local datadir2delete
         local target
         local userresponse
 
@@ -486,48 +491,47 @@ function processarguments(){
             listPrefixInfo
             exit 0
         fi 
-
         target="not"
         for prefix in "${prefixs[@]}"; do # try to find requested prefix in known list
             if [[ "$prefix2delete" == "$prefix" ]]; then
                 target=$prefix2delete
                 break
             fi
-        done
-        
+        done   
         if [[ $target == 'not' ]]; then # not found, print list, end
-            echo "Supplied prefix:$prefix2delete not found -- exiting"
+            echo "Supplied prefix: '$prefix2delete' not found -- exiting"
             listPrefixInfo
             exit 0
         fi
-        datadir2dlete='not found'
-        config2delete='not found'
         config2delete="$( find "$topconfigdir" -maxdepth 1 -type f -regex ".*$target.txt"  )"  
-        datadir2dlete="$(gettopdatadir)/$target.d"
-        
+        datadir2delete="$(gettopdatadir)/$target.d"
+        [[ -e "$config2delete" && -r "$config2delete" && -f "$config2delete" ]] || config2delete='' 
+        [[ -e "$datadir2delete" && -r "$datadir2delete" && -d "$datadir2delete" ]] || datadir2delete=''       
         if amIdebugging; then    
             echo "$target found"
             echo "config to delete: $config2delete"
-            echo "datadir to delete: $datadir2dlete"
+            echo "datadir to delete: $datadir2delete"
         fi
-                
+        
         function dodelete(){
-            # printf "\nDeleting prefix %s at %s\n" "$target" "$config2delete"
-            # printf "Deleting prefix %s data at %s\n\n" "$target" "$datadir2dlete"
-            rm -v "$config2delete"
-            rm -rv "$datadir2dlete"
-            echo "done"
+            [[ -n "$config2delete"  ]] && rm -v "$config2delete"
+            [[ -n "$datadir2delete"  ]] && rm -rv "$datadir2delete"
+            echo "removal complete"
         }
 
-        printf "\n\nDo you want to delete?:\n\t%s/* and\n\t%s\n" "$config2delete" "$datadir2dlete"
+        [[ -n $config2delete && -n $datadir2delete  ]] && printf "\n\nDo you want to delete?:\n\t%s and\n\t%s/*\n" "$config2delete" "$datadir2delete"
+        [[ -z $config2delete && -n $datadir2delete  ]] && printf "\n\nDo you want to delete?:\n\t%s/* \n"  "$datadir2delete"
+        [[ -n $config2delete && -z $datadir2delete  ]] && printf "\n\nDo you want to delete?:\n\t%s \n" "$config2delete" 
+
         printf "If you delete these, there is no backup... Be sure..."
-        read -p -r 'OK to delete these files(Y/N)' userresponse
+        read -p 'OK to delete these files(Y/N)' userresponse
+        
         if [[ "$userresponse" =~ ^[Yy].* ]]
         then 
             dodelete
             listPrefixInfo
         else
-            echo 'Prefix Delete aborted...'
+            echo "$prefix2delete prefix delete aborted..."
         fi
         exit 0
     }
