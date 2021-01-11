@@ -139,28 +139,30 @@ function setupPaths1(){
         topdatadir
         dlastusedconfig -- initalized with bogus info
     '
+    local topconfigdir
+    local lastusedconfigpth
+    local lastusedpth
+    local topdatadir
+    
     if [ -z ${XDG_CONFIG_HOME+x} ]
     then
         #echo "var is unset"
         XDG_CONFIG_HOME="$HOME/.config"
         export XDG_CONFIG_HOME
     fi
-    local topconfigdir
-    local lastusedconfigpth
-    local lastusedpth
-    local topdatadir
 
     topconfigdir="$XDG_CONFIG_HOME/orrccheck.d"
     mypths["topconfigdir"]=$topconfigdir
     mkdir -p --verbose "$topconfigdir"
     lastusedpth="$topconfigdir/lastusedpre.txt"
     mypths["lastusedpth"]="$lastusedpth"
+    lastusedconfigpth=''
     if [[ -f "$lastusedpth" ]]
     then
         while read -r line
             do
                 [ -z "$line" ] && continue  # ignore leading blank lines
-                lastusedconfigpth="${mypths[topconfigdir]}/$line"  # take the first non blank line
+                lastusedconfigpth="$line"  # take the first non blank line
                 break
             done < "${mypths[lastusedpth]}"
             mypths[dlastusedconfig]="$lastusedconfigpth"
@@ -168,6 +170,7 @@ function setupPaths1(){
         touch "$lastusedpth"
         mypths[dlastusedconfig]=''
     fi
+
     [[ -f "$lastusedpth" ]] || touch "$lastusedpth"
 
     if [ -z ${XDG_DATA_HOME+x} ]
@@ -179,8 +182,7 @@ function setupPaths1(){
     topdatadir="$XDG_DATA_HOME/orrccheck.d"
     mkdir -p --verbose "$topdatadir"
     mypths[topdatadir]="$topdatadir"
-    #mypths[dlastusedconfig]='lkjaslkjflasjfljllk'
-    #printmypth
+
 }
 
 function setupPaths2(){
@@ -201,9 +203,7 @@ function setupPaths2(){
         topconfigdir
         lastusedpth
     '
-    #lastusedpth="${mypths[lastusedpth]}"
-    #topdatadir="${mypths[topdatadir]}"
-    #topconfigdir="${mypths[topconfigdir]}"
+
     while read -r line
     do
         [ -z "$line" ] && continue  # ignore leading blank lines
@@ -229,55 +229,56 @@ function setupPaths(){
 
 }
 
+function makeconfigfile(){
+    local configfiletext=(
+    '#'
+    '# this is a comment'
+    '# blank lines are not allowed, but the last line must be empty'
+    '# values must not contain [[:blank:]] charaters (well they are removed)'
+    '#'
+    '# default prefix - the data files are named prefixraw_YYYYMMDDHHMMSS.txt'
+    'deffilepre:k7rvm'
+    '#'
+    '# default max number of dated raw files to keep'
+    'maxfiles2keep:10'
+    '#'
+    '# grepsearch with required escapes this string will be'
+    '# inclosed in single quotes in bash'
+    '# for example N6wn\\|KG7FOJ\\|K7RVM'
+    '#'
+    'searchstring:W9PCI\\|K7RVM'
+    '#'
+    '# program inserted diffinitions follow.'
+    '#'
+    '#'
+    '# last line (the next one) must be empty (blank, no chacters)'
+    ''
+    )
+
+    local maxfiles 
+    local defaultfileprefix 
+    local sstring 
+    local configfile 
+
+    printf "%s\n" "initializing config file"
+    read -r -p 'searchstring? ' sstring
+    read -r -p 'default file prefix? ' defaultfileprefix
+    read -r -p 'max files to keep? ' maxfiles
+
+    configfiletext[6]="deffilepre:$defaultfileprefix"
+    configfiletext[9]="maxfiles2keep:$maxfiles"
+    configfiletext[15]="searchstring:$sstring"
+
+    configfile="${mypths[topconfigdir]}/$defaultfileprefix.txt"
+    echo "check parameter file at: $configfile"  
+    printf "%s\n" "${configfiletext[@]}" > "$configfile"    
+}
+
 function initializeprams(){
     : '
     Used to create the initial bla bla alb alb
     '
-    local configfiletext=(
-        '#'
-        '# this is a comment'
-        '# blank lines are not allowed, but the last line must be empty'
-        '# values must not contain [[:blank:]] charaters (well they are removed)'
-        '#'
-        '# default prefix - the data files are named prefixraw_YYYYMMDDHHMMSS.txt'
-        'deffilepre:k7rvm'
-        '#'
-        '# default max number of dated raw files to keep'
-        'maxfiles2keep:10'
-        '#'
-        '# grepsearch with required escapes this string will be'
-        '# inclosed in single quotes in bash'
-        '# for example N6wn\|KG7FOJ\|K7RVM'
-        '#'
-        'searchstring:W9PCI\|K7RVM'
-        '#'
-        '# program inserted diffinitions follow.'
-        '#'
-        '#'
-        '# last line (the next one) must be empty (blank, no chacters)'
-        ''
-        )
-
-    function makeconfigfile(){
-        printf "%s\n" "initializing config file"
-        read -r -p 'searchstring? ' sstring
-        read -r -p 'default file prefix? ' defaultfileprefix
-        read -r -p 'max files to keep? ' maxfiles
-
-        configfiletext[6]="deffilepre:$defaultfileprefix"
-        configfiletext[9]="maxfiles2keep:$maxfiles"
-        configfiletext[15]="searchstring:$sstring"
-
-        configfile="${mypths[topconfigdir]}/$defaultfileprefix.txt"
-
-        echo "check parameter file at: $configfile"   # TOFIX need to update the last used config file
-        printf "%s\n" "${configfiletext[@]}" > "$configfile"    # TOFIX and mark this one as --- more complex than this
-        echo "$configfile" > "${mypths[topconfigdir]}/lastusedpre.txt"
-        mypths[dlastusedconfig]="$configfile"
-    }
-
     [[ ! -r "${mypths[dlastusedconfig]}"  ]] && makeconfigfile
-
 }
 
 function initializePramsFromNothing(){
@@ -303,7 +304,6 @@ function amIdebugging(){
 
 function processarguments(){
 
-
     function saveall(){
         options+=([saveall]=true)
     }
@@ -318,7 +318,34 @@ function processarguments(){
     # }
 
     function createnewprefix(){
-        prefix="$1"
+        local prefix="$1"
+        local -a prefixs
+        local defprefixpth
+        local defprefix 
+        local defdatapth
+        local cnt
+        local idx
+        local temp
+        
+        getprefixInfo prefixs # get known prefixs
+
+
+
+
+        for temp in "${prefixs[@]}"; do 
+            if [[ "$temp" == "$prefix" ]]; then
+                printf '\n%s already exists, exiting\n\n' "$prefix"
+                exit 0 
+            fi
+        done
+        
+        datapth="$(gettopdatadir)/$prefix.d/"
+
+        echo "mkdir -pv $datapth"
+        makeconfigfile
+
+        exit 0
+
         echo '************** -x not yet implemented ***********'
     }
 
@@ -339,17 +366,49 @@ function processarguments(){
         local config2delete
         local target
         local userresponse
+        local existingprefs
 
         newdefaultpre="$1"
         getprefixInfo prefixs # get known prefixs
+        print
         defprefixpth="$(getdefaultprepath)"
+        existingprefs='false'
+        printmypth
+
+        for pf in "${prefixs[@]}"; do    # check if requested prefix exists
+            if [[ "$pf" == "$newdefaultpre" ]]; then 
+                existingprefs='true'
+                break
+            fi 
+        done 
+
+        if [[ "$existingprefs" == 'false' ]] ; then   # nope, it does not
+            echo "$newdefaultpre not defined --- aborting"
+            exit 0
+        fi 
+        
         defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
-        if [[ $defprefix == "$prefix2delete" ]]; then    # cannot delete default prefix
-            printf "\nCannot delete default prefix %s." "$defprefix"
+        
+        if [[ -z "$defprefix" ]]
+        then # no existing default so just set request to default
+            echo 'INFO: no existing default'
+
+
+        else 
+            echo 'placeholder'
+        fi 
+
+        exit 0
+
+        if [[ $defprefix == "$newdefaultpre" ]]; then    # cannot delete default prefix
+            printf "\nCannot replace the default prefix with its self. Specified %s.\n" "$defprefix"
             listPrefixInfo
             exit 0
         fi
 
+
+
+        exit 0
         # check the prefix is known
         # if the current default is not set, then just set it, otherwise
         # check it is not already the default prefix
@@ -404,23 +463,6 @@ function processarguments(){
         printf "\n"
     }
 
-    # function locatePrefixInfo(){
-    #     local -a junk
-    # }
-
-    # function removePrefix(){
-    #     local -a prefixlist
-    #     #local -A prefixdir
-    #     getprefixInfo "$prefixlist"
-    #     local cnt=${#prefixlist[@]}
-    #     local toberemoved="$1"
-    #     for prefix in "${prefixlist[@]}"; do
-    #         [[ $toberemoved == "$prefix" ]] && break
-    #     done
-    #     echo "$prefix found"
-    #     locatePrefixInfo "$toberemoved"  
-    #     remove "$prefix"
-    # }
 
     function deleteprefix(){
         local prefix2delete
@@ -431,6 +473,7 @@ function processarguments(){
         local idx
         local prefix
         local config2delete
+        local datadir2dlete
         local target
         local userresponse
 
@@ -445,7 +488,7 @@ function processarguments(){
         fi 
 
         target="not"
-        for prefix in "${prefixs[@]}"; do # try to find requsted prefix in known list
+        for prefix in "${prefixs[@]}"; do # try to find requested prefix in known list
             if [[ "$prefix2delete" == "$prefix" ]]; then
                 target=$prefix2delete
                 break
@@ -453,7 +496,7 @@ function processarguments(){
         done
         
         if [[ $target == 'not' ]]; then # not found, print list, end
-            echo "Supplied prefix:$prefix2delete not found"
+            echo "Supplied prefix:$prefix2delete not found -- exiting"
             listPrefixInfo
             exit 0
         fi
@@ -535,7 +578,7 @@ function processarguments(){
     # shellcheck disable=SC2128
     # shellcheck disable=SC2086
     #./orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix -z prefix
-    while getopts "bhsdlxpu:c:z:" opt $inputargs; do
+    while getopts "bhsdlpu:c:z:x:" opt $inputargs; do
         case $opt in
             b)
                 debugging
@@ -551,12 +594,13 @@ function processarguments(){
                 saveiaf
             ;;
             l)
-                #working               
                 listPrefixInfo
+                echo 'exiting'
                 exit 0
             ;;
             c)
                 setnewdefaultprfix "$OPTARG"
+                echo 'exiting'
                 exit 0
                 
             ;;
@@ -567,7 +611,9 @@ function processarguments(){
             ;;
             x)
                 createnewprefix "$OPTARG"
-                changeconfig=true
+                #changeconfig=true
+                echo 'exiting'
+                exit 0
             ;;
             p)               
                 persistthisreading
@@ -576,6 +622,7 @@ function processarguments(){
                 if amIdebugging; then    
                     printmypth; fi
                 deleteprefix "$OPTARG"
+                echo 'exiting'
                 exit 0
             ;;
             h)
@@ -626,14 +673,13 @@ then
         echo 'first time initialization'
         initializePramsFromNothing
 else
-        #echo 'setupPaths'
         setupPaths1
 fi
 # setupPaths
 # ((mypths[firsttime])) && initializePramsFromNothing #|| notfirsttime
 
-list=$*
-processarguments "$list"
+topargs=$*
+processarguments "$topargs"
 
 if amIdebugging; then
     printOptions

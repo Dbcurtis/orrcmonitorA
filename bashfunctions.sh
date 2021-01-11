@@ -4,19 +4,19 @@ set -euo pipefail
 IFS=$'\n\t'
 
 : ' bashfunctions.sh
- use by source bashfunctions.sh
- then invoke the function you want
+    use by --source bashfunctions.sh--
+    then invoke the function you want
 #####################################
 
 >>>>getdatedfilename pre post
 #####################################
- GLOBALS: outfilename
- ARGUMENTS: pre post
- OUTPUTS: $outfilename  
- RETURN:
+    GLOBALS: outfilename
+    ARGUMENTS: pre post
+    OUTPUTS: $outfilename  
+    RETURN:
 
- the filename is structured as preraw_YYYYMMDDHHMMSSpost
- post needs to include the "." if you are trying for an extension
+    the filename is structured as preraw_YYYYMMDDHHMMSSpost
+    post needs to include the "." if you are trying for an extension
 
 #####################################
 '
@@ -40,39 +40,39 @@ getdatedfilename() {
 : '
 >>>>reversesortfiles()
 ##############################
- GLOBALS:  rsdatedfiles -reverse sort of dated files in current working dir
- ARGUMENTS: something like 'k7rvmraw_'
- OUTPUTS:
- RETURN: rsdatedfiles  sorted newest to oldest
+    GLOBALS:  rsdatedfiles -reverse sort of dated files in current working dir
+    ARGUMENTS: something like 'k7rvmraw_'
+    OUTPUTS:
+    RETURN: rsdatedfiles  sorted newest to oldest
 #
 #####################################
 '
 
 reversesortfiles() {
-  local prefix=$1
-  local files=($prefix*.txt)
-  local oldifs="$IFS"
+    local prefix=$1
+    local files=($prefix*.txt)
+    local oldifs="$IFS"
 # shellcheck disable=SC2034 #calling shell has exported this
-  IFS=$'\n' rsdatedfiles=($(sort -r <<<"${files[*]}"))
-  IFS="$oldifs"
+    IFS=$'\n' rsdatedfiles=($(sort -r <<<"${files[*]}"))
+    IFS="$oldifs"
 }
 : '
-# ways to display rsdtaedfiles content:
-#  for i in "${rsdatedfiles[@]}"; do echo "$i"; done
-#  for (( i=0; i<$len; i++ )); do echo "${rsdatedfiles[$i]}"; done
+ways to display rsdtaedfiles content:
+    for i in "${rsdatedfiles[@]}"; do echo "$i"; done
+    for (( i=0; i<$len; i++ )); do echo "${rsdatedfiles[$i]}"; done
 #####################################
 '
 
 : '
 >>>>getprefixnames() pth resultarray 
 ##############################
- GLOBALS:  
- ARGUMENTS: pth: the path to look for the prefix files usually ~.config/orrccheck.d
-            resultarray: an array to store the results in
- OUTPUTS:   fills the resultarray with the prefixs 
- RETURN: 
+    GLOBALS:  
+    ARGUMENTS:  pth: the path to look for the prefix files usually ~.config/orrccheck.d
+                resultarray: an array to store the results in
+    OUTPUTS:    fills the resultarray with the prefixs 
+    RETURN: 
 
- Example use:
+Example use:
     declare -a tarr
     getprefixinfo  "$HOME/.config/orrccheck.d" tarr
     echo ${tarr[*]}
