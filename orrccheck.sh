@@ -351,6 +351,7 @@ function processarguments(){
     function useexistingprefix(){
         prefix=$1
         echo '************** -u not yet implemented ***********'
+        options+=([onetimeprefix]="$prefix")
     }
 
     function setnewdefaultprfix(){
@@ -685,6 +686,13 @@ fi
 topargs=$*
 processarguments "$topargs"
 
+# if amIdebugging; then
+#     printOptions
+#     printmypth
+# fi
+
+keyexists 'onetimeprefix' && mypths[dlastusedconfig]="${mypths[topconfigdir]}/${options[onetimeprefix]}.txt"
+
 if amIdebugging; then
     printOptions
     printmypth
@@ -792,14 +800,22 @@ then
         echo "removing Published dir"
     fi
     rm Published   # if the most current file is the one we expect, delete Published
-    #
-    # check if there was a change between the last file and the current file
-    #
-    if  diff "$outfilename" "${rsdatedfiles[1]}" > /dev/null
+    shopt -s nullglob
+    numfiles=(*)
+    numfiles=${#numfiles[@]}
+    shopt -u nullglob
+    
+    if [[ $numfiles -gt 1 ]]
     then
-        if canIdeletefiles; then
-            echo "removing older identical file ${rsdatedfiles[1]}"
-            rm -i "${rsdatedfiles[1]}"   # deleating the older identical file
+        : '
+        check if there was a change between the last file and the current file
+        '
+        if  diff "$outfilename" "${rsdatedfiles[1]}" > /dev/null
+        then
+            if canIdeletefiles; then
+                echo "removing older identical file ${rsdatedfiles[1]}"
+                rm -i "${rsdatedfiles[1]}"   # deleating the older identical file
+            fi
         fi
     fi
 else
