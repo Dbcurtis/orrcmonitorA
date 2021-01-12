@@ -41,9 +41,10 @@ function version(){
 }
 
 function printdatedfiles(){
-    title=$1
-    len=${#rsdatedfiles[@]}
+    local title=$1
+    local len=${#rsdatedfiles[@]}
     printf "\n##############\n%s\n############\n" "$title "
+    local i
     for (( i=0; i<len; i++ ));do
         echo "${rsdatedfiles[$i]}"
     done
@@ -58,7 +59,7 @@ function setdefault(){
     pretoset=$1
     prepath="${mypths[topconfigdir]}/$pretoset.txt"
     echo "$prepath" > "${mypths[lastusedpth]}"
-    printmypth
+    #printmypth
 }
 
 function printOptions(){
@@ -229,16 +230,13 @@ function setupPaths(){
     : '
     The configuration directory is ~/.config/orrccheck.d
     it contains a file /prefix.txt --for each prefix
-    it also contains /lastusedpre.txt that contains one line which is the prefix.txt name of the last prefix used.
+    it also contains /lastusedpre.txt that contains one line 
+    which is the prefix.txt path to the default prefix to be used.
 
     The Data dirctory is ~/.local/share/orrccheck.d/prefix.d/www.orrc.org/Coordinations/
     which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
 
     '
-    echo 'should not get here'
-    setupPaths1
-    setupPaths2
-
 }
 
 function makeconfigfile(){
@@ -256,9 +254,9 @@ function makeconfigfile(){
     '#'
     '# grepsearch with required escapes this string will be'
     '# inclosed in single quotes in bash'
-    '# for example N6wn\\|KG7FOJ\\|K7RVM'
+    '# for example N6wn\|KG7FOJ\|K7RVM'
     '#'
-    'searchstring:W9PCI\\|K7RVM'
+    'searchstring:W9PCI\|K7RVM'
     '#'
     '# program inserted diffinitions follow.'
     '#'
@@ -323,7 +321,6 @@ function processarguments(){
     function saveiaf(){
         options+=([saveiaf]=true)
     }
-
 
     function createnewprefix(){
         local prefix="$1"
@@ -414,19 +411,19 @@ function processarguments(){
         exit 0
     }
 
-    function setprefix(){
-        echo '-e Not Yet IMPLEMENTED'
-        options+=([setprefix]="$1")
-    }
+    # function setprefix(){
+    #     echo '-e Not Yet IMPLEMENTED'
+    #     options+=([setprefix]="$1")
+    # }
 
     function debugging(){
         echo "hidden debugging command activated"
         options+=([debugging]='yes')
     }
 
-    function setextractregex(){
-        options+=([regex]="$1")
-    }
+    # function setextractregex(){
+    #     options+=([regex]="$1")
+    # }
 
     function getprefixInfo(){
         topconfigdir="${mypths[topconfigdir]}"
@@ -448,7 +445,7 @@ function processarguments(){
         cnt=${#prefixs[@]}
         idx=0
         defprefixpth="$(getdefaultprepath)"
-        echo "mark $defprefixpth"
+        #echo "mark $defprefixpth"
         if [[ -z $defprefixpth  ]]
         then
             defprefix='No Default selected use the -c option to select one of the following known prefixes.'
@@ -542,11 +539,11 @@ function processarguments(){
     }
 
     function usesaved(){
-        echo ' use unchanged saved '
+        : 'echo  use unchanged saved '
     }
 
     function nousesaved(){
-        echo 'use modified saved '
+        : 'echo use modified saved '
     }
 
     function showhelp(){
@@ -578,11 +575,11 @@ function processarguments(){
     options+=([changeconfig]=false)
     modtosaved=false # if it remains 0, then use the default 
     changeconfig=false # if it 
-    #echo 'start of getopts'
+    
     # shellcheck disable=SC2128
     # shellcheck disable=SC2086
-    #./orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix -z prefix
-    while getopts "bhsdlpu:c:z:x:" opt $inputargs; do
+
+    while getopts "bhsdlpu:c:z:x:" opt $inputargs; do     
         case $opt in
             b)
                 debugging
@@ -633,8 +630,13 @@ function processarguments(){
                 showhelp
                 exit 0
             ;;
-            \?)
+            \?)               
+                echo "unknown option"
                 showhelp
+                exit 1
+            ;;
+            :)
+                echo "Option $OPTARG requires a following argument such as -o argument"
                 exit 1
             ;;
         esac
@@ -662,8 +664,6 @@ function processarguments(){
     else
         usesaved
     fi
-    exit
-
 }
 : '
 ##################
@@ -693,6 +693,7 @@ fi
 configfile="${mypths[dlastusedconfig]}"
 gen_pram_dict "$configfile"
 if amIdebugging; then
+    echo "configfile in use is $configfile"
     printdict
 fi
 
@@ -734,24 +735,22 @@ if amIdebugging; then
     echo "$topdatadir"
 fi
 
-    : '
-    The configuration directory is ~/.config/orrccheck.d
-    it contains a file /prefix.txt --for each defined prefix
-    it also contains /lastusedpre.txt that contains one line which is the prefix.txt path to the last prefix used.
+: '
+The configuration directory is ~/.config/orrccheck.d
+it contains a file /prefix.txt --for each defined prefix
+it also contains /lastusedpre.txt that contains one line which is the prefix.txt path to the last prefix used.
 
-    The Data dirctory  is ~/.local/share/orrccheck.d/prefix.d/www.orrc.org/Coordinations/
-    which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
+The Data dirctory  is ~/.local/share/orrccheck.d/prefix.d/www.orrc.org/Coordinations/
+which contains files of the form filepreraw_YYYYMMDDHHMMSS.txt i.e. k7rvmraw_20201209135901.txt
 
-    '
+'
 
 # the dated file name is of the form $prefixraw_YYYYMMDDHHMMSS.txt
-echo 1
 cd "$topdatadir" || exit 48
 prefdatadir="$fileprefix.d"
-echo 2
 cd "$prefdatadir" || exit 50
-
-wget -p http://www.orrc.org/Coordinations/Published
+echo "wait as orrc.org is scraped... "
+wget -qp http://www.orrc.org/Coordinations/Published
 cd www.orrc.org || exit 55
 rm -r Scripts bundles Content # do not need data in Scripts, bundles, or Content
 cd Coordinations/ || exit 60  # do need data in Coordinations
@@ -764,14 +763,21 @@ cd Coordinations/ || exit 60  # do need data in Coordinations
     and making the <tr>...</tr> obvious
     dump to the dated file name from outfilename
 '
-echo 3
-grep -i "${dict['searchstring']}" Published | \
-sed 's#</td><td#</td>\n<td#g' | \
-sed 's#</tr>#\n</tr>\n<tr>#' | \
-sed '1 i v1.0.1<tr>' \
-> "$outfilename"
+if  grep -i "${dict['searchstring']}" Published > tempfile.tmp 
+then 
+    printf "\nMatches found for %s\n" "${dict['searchstring']}"
+    sed 's#</td><td#</td>\n<td#g' < tempfile.tmp | \
+    sed 's#</tr>#\n</tr>\n<tr>#' | \
+    sed '1 i v1.0.1<tr>' \
+    > "$outfilename"
+    rm tempfile.tmp
+else
+    printf "\nNo Matches found for %s, nothing done.\n" "${dict['searchstring']}"
+    rm tempfile.tmp
+    exit 1
+fi
 
-echo "new outfile is: $outfilename"
+printf "\nnew outfile is:\t%s\n" "$outfilename"
 
 arg="${fileprefix}raw_"
 reversesortfiles "$arg"
