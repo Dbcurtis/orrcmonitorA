@@ -1,4 +1,6 @@
-#!/usr/bin/bash
+#!/bin/bash
+#
+echo "$SHELL"
 : 'Copyright (c) 2021 by Daniel B. Curtis
   usage is per the GNU GENERAL PUBLIC LICENSE Version 3
   which has been distributed herewith.
@@ -10,7 +12,7 @@ IFS=$'\n\t'
 
 # see; http://ahmed.amayem.com/bash-arrays-3-different-methods-for-copying-an-array/
 # for info on copying arrays
-export topdatadir #why exporting this and mypths?
+export topdatadir # TODO FIXME exporting this and mypths?
 export mypths
 
 # shellcheck source=/dev/null
@@ -284,13 +286,6 @@ function makeconfigfile(){
     printf "%s\n" "${configfiletext[@]}" > "$configfile"    
 }
 
-# function initializeprams(){
-#     : '
-#     Used to create the initial bla bla alb alb
-#     '
-#     #[[ ! -r "${mypths[dlastusedconfig]}"  ]] && makeconfigfile
-# }
-
 function initializePramsFromNothing(){
     setupPaths1
     echo 'initprams'
@@ -430,13 +425,6 @@ function processarguments(){
         if [[ -e "$topconfigdir" && -r "$topconfigdir" && -d "$topconfigdir" ]] 
         then
             doit='true'
-            # shopt -s nullglob
-            # shopt -s dotglob
-            # chk_files=("$topconfigdir/*")
-            # (( ${#chk_files[*]} != 0 )) && doit='true'
-            # shopt -u nullglob
-            # shopt -u dotglob
-            # echo $doit
             if [[ "$doit" == 'true' ]]; then
                 #echo 'call getprefixnames'
                 getprefixnames "$topconfigdir" "$1"
@@ -534,7 +522,7 @@ function processarguments(){
         [[ -n $config2delete && -z $datadir2delete  ]] && printf "\n\nDo you want to delete?:\n\t%s \n" "$config2delete" 
 
         printf "If you delete these, there is no backup... Be sure..."
-        read -p 'OK to delete these files(Y/N)' userresponse
+        read -rp 'OK to delete these files(Y/N)' userresponse
         
         if [[ "$userresponse" =~ ^[Yy].* ]]
         then 
@@ -786,19 +774,19 @@ cd Coordinations/ || exit 60  # do need data in Coordinations
     and making the <tr>...</tr> obvious
     dump to the dated file name from outfilename
 '
-if  grep -i "${dict['searchstring']}" Published > tempfile.tmp 
-then 
+if  grep -i "${dict['searchstring']}" Published > tempfile.tmp # extract matches put in tempfile.tmp
+then # if a match was found
     vid="$VERSION"
-    [[ "${dict[persist]}" == true ]] && vid="$vid-Persist"
+    [[ "${dict[persist]}" == true ]] && vid="$vid-Persist" #insert version and possibly persist
     #echo "$vid"
-    printf "\nMatches found for %s\n" "${dict['searchstring']}"
+    printf "\nMatches found for %s\n" "${dict['searchstring']}" # convert the tempfile and put in outfilename
     sed 's#</td><td#</td>\n<td#g' < tempfile.tmp | \
     sed 's#</tr>#\n</tr>\n<tr>#' | \
     sed '1 i '"$vid<tr>" \
     > "$outfilename"
     
     rm tempfile.tmp
-else
+else # if no match found
     printf "\nNo Matches found for %s, nothing done.\n" "${dict['searchstring']}"
     rm tempfile.tmp
     exit 1
@@ -806,13 +794,38 @@ fi
 
 printf "\nnew outfile is:\t%s\n" "$outfilename"
 
-arg="${fileprefix}raw_"
+arg="${fileprefix}raw_" # get the data files, and reverse sort by filename (reverse sort by date)
 reversesortfiles "$arg"
 if amIdebugging; then
     printdatedfiles "dated files for $fileprefix "
 fi
 
-if [ "${rsdatedfiles[0]}" = "$outfilename" ] #checking for consistancy
+function deleatablefile(){
+    
+    : '
+    input: a file path
+    read one line
+    respond dependent on if the -Persist exists.
+    if it exists say so and rm with -i 
+    if canIdeletefiles; then
+        echo "yes you can"
+    else
+        echo "no you cannot"
+    fi
+    '
+    #echo "$1"
+    [[ -e "$1" && -r "$1" && -f "$1" ]] || return 1
+    while read -r line; do 
+        #echo  "$line"
+        if [[ "$line" == *"-Persist"* ]]; then
+            return 1
+        fi 
+        break
+    done < "$1"
+    return 0
+}
+
+if [ "${rsdatedfiles[0]}" = "$outfilename" ] #check for consistancy -- current file should be most recient
 then
     if amIdebugging; then
         echo "current file is: $outfilename"
@@ -824,20 +837,27 @@ then
     numfilesl=${#numfiles[@]}
     shopt -u nullglob
     
-    if [[ $numfilesl -gt 1 ]]
+    if [[ $numfilesl -gt 1 ]] # if only current file in the dir, cannot compair with others.
     then
         : '
         check if there was a change between the last file and the current file
         '
         if  diff "$outfilename" "${rsdatedfiles[1]}" > /dev/null
         then
-            if canIdeletefiles; then
-                echo "removing older identical file ${rsdatedfiles[1]}"
-                rm -i "${rsdatedfiles[1]}"   # deleating the older identical file
+            if canIdeletefiles; then 
+                if deleatablefile "${rsdatedfiles[1]}"
+                then
+                    rm -v "${rsdatedfiles[1]}"
+                else
+                    echo "prior file is a persistent file"
+                    rm -i "${rsdatedfiles[1]}"
+                fi
+                # echo "removing older identical file ${rsdatedfiles[1]}"
+                # rm -i "${rsdatedfiles[1]}"   # deleating the older identical file
             fi
         fi
     fi
-else
+else  # something screwy happened
     echo "something screwy 1"
     echo "outfilename = -$outfilename-"
     aaa="${rsdatedfiles[0]}"
@@ -869,7 +889,15 @@ if canIdeletefiles; then
     for f in "${toB_deleated[@]}"; do echo "$f" ;done
 
     printf "\n##############\n%s\n############\n" "deleating adjacent duplicate files"
-    for f in "${toB_deleated[@]}"; do rm -i "$f" ;done
+    for f in "${toB_deleated[@]}"; do
+        if deleatablefile "$f"
+        then
+            rm -v "$f"
+        else
+            echo "persistent file"
+            rm -i "$f"
+        fi
+    done
 fi
 
 reversesortfiles "$arg"
@@ -883,7 +911,14 @@ if canIdeletefiles; then
         printf "\n##############\n%s\n############\n" "too many files, deleting these:"
         for (( i=0; i<len; i++ ));do
             echo "deleating ${toB_gone[$i]}"
-            rm -i "${toB_gone[$i]}"
+            if deleatablefile "${toB_gone[$i]}"
+            then
+                rm -v "${toB_gone[$i]}"
+            else
+                echo "persistent file"
+                rm -i "${toB_gone[$i]}"
+            fi
+            
         done
     fi
 fi

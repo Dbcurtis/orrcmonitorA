@@ -28,10 +28,10 @@ ________
 This project:
   
   1) periodically scrapes the ORRC website to extract 
-     specific published coordination records
+      specific published coordination records
 
   2) compares the contents of the extracted records 
-     with prior records
+      with prior records
 
   3) if a change will send an email to specified addresses
 
@@ -65,14 +65,46 @@ Command line options and parameters
     -p                   persist this reading
     -u     prefix        use an existing prefix onetime 
     -c     prefix        set prefix as new default prefix
-    -z     prefix        delete the prefix file from .config, and the corrosponding data files
+    -z     prefix        delete the prefix file from .config, 
+                          and the corrosponding data files
     ===== ============= =================================================
 
+Usage comments: 
+----------------
 
-Parameter file
-==============
+This includes setup and operational comments. 
 
-Future version may provide a means for selecting the parameeter file.
+The first time run should be ``./orrccheck.sh -h`` and the program will print out the help as listed above and automatically
+setup the directory heirochy for ``~/.config/orrccheck.d`` and ``~/.local/share/orrccheck.d``. 
+
+The next command is: ``./orrccheck.sh -x prefix`` where 'prefix' 
+could be a call sign, or name, but not including whitespace.
+You will be prompted for:: 
+
+  1) a regex ``searchstring`` (for example, "n6wn" or "n6wn\|k7rvm" -- the "\|" allows the 
+  regex "|" to be used as an or search.
+
+  2) a ``default file prefix?`` which should be the same as the -x prefix. 
+
+  3) a ``max files to keep?``  which limits the number of readings kept for the specified prefix.
+
+
+The next command ``./orrccheck.sh -c prefix`` will set the just defined prefix as the defalut.
+Now, each time you submit a ``./orrccheck.sh`` command, you will get readings for the search regex for
+the default prefix.
+
+You can create multiple prefixes and you can invoke a non-defaulted prefix using the ``-u`` option.
+
+Use the ``-l`` switch to list the available prefixes and which is the default.
+
+The progam will by default remove identical readings (except for those marked as persistent using the ``-p`` switch).
+And will try to limit the number of saved files to the value specified for the prefix.  
+
+Attempts to remove defaulted files requires user intervention to allow (Need to disable this for automatic operation)
+
+The ``-s`` switch disables deleation of any of the saved files.
+
+The ``-z prefix`` option deletes the prefix (unless it is the default) and deletes the associated data files.
 
 
 
@@ -141,13 +173,16 @@ Testing process from the start:
 Problems
 ==========
 
--up switch combo crashs and that is because u takes a parameeter and it aint p.
+-up switch/option combo crashs and that is because u takes a parameeter and it aint p.
 probably a documentation fix.
 
 Currently puting a junk.txt file in the config direcory.  It is not seen by -l, but it is not 
-pretty.  Easy work around of a bug I do not want to take the time to fix.
+a pretty solution.  Easy work around of a bug I do not want to take the time to fix right now.
 
-to find persistent readings, do  grep -r -n -i --include="*.txt" Persist .
+To find persistent readings, do  ``grep -r -n -i --include="*.txt" Persist``.
+
+Need to automatically send an email when the current and last reading differ.
+
 
 
 
