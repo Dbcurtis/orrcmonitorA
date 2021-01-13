@@ -89,14 +89,16 @@ function getprefixnames(){
     local -a arr
     local -a arr_s
     #local -A __prefix2path
-
+    #echo 'in prefixnames'
     topconfigdir="$1"
     __resultvar=$2
     #__prefix2path=$3
 
     filesa="$( find "$topconfigdir" -maxdepth 1 -type f -iregex ".*[.]txt"  )"
     for f in $filesa; do 
-        [[ "$f" != *"lastusedpre"* ]] && files+=("$f"); done # drop the lastusedpre.txt file
+        [[ "$f" != *"lastusedpre"* && "$f" != *"junk"* ]] && files+=("$f")
+        
+    done # drop the lastusedpre.txt file
     
     result=$(basename -as .txt ${files[*]}) # result is a string  
     arr=($result)   

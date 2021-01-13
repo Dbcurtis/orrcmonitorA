@@ -181,6 +181,7 @@ function setupPaths1(){
             mypths[dlastusedconfig]="$lastusedconfigpth"
     else
         touch "$lastusedpth"
+        touch "$topconfigdir/junkdebug.txt"
         mypths[dlastusedconfig]=''
     fi
 
@@ -195,7 +196,6 @@ function setupPaths1(){
     topdatadir="$XDG_DATA_HOME/orrccheck.d"
     mkdir -p --verbose "$topdatadir"
     mypths[topdatadir]="$topdatadir"
-
 }
 
 function setupPaths2(){
@@ -284,16 +284,17 @@ function makeconfigfile(){
     printf "%s\n" "${configfiletext[@]}" > "$configfile"    
 }
 
-function initializeprams(){
-    : '
-    Used to create the initial bla bla alb alb
-    '
-    [[ ! -r "${mypths[dlastusedconfig]}"  ]] && makeconfigfile
-}
+# function initializeprams(){
+#     : '
+#     Used to create the initial bla bla alb alb
+#     '
+#     #[[ ! -r "${mypths[dlastusedconfig]}"  ]] && makeconfigfile
+# }
 
 function initializePramsFromNothing(){
     setupPaths1
-    initializeprams
+    echo 'initprams'
+    #initializeprams
 }
 
 function amIdebugging(){
@@ -327,11 +328,10 @@ function processarguments(){
         local -a prefixs
         local defprefixpth
         local defprefix 
-        local defdatapth
         local cnt
         local idx
         local temp
-        local datapath
+        local datapth
         
         getprefixInfo prefixs # get known prefixs
 
@@ -350,7 +350,6 @@ function processarguments(){
 
     function useexistingprefix(){
         prefix=$1
-        echo '************** -u not yet implemented ***********'
         options+=([onetimeprefix]="$prefix")
     }
 
@@ -430,7 +429,18 @@ function processarguments(){
         topconfigdir="${mypths[topconfigdir]}"
         if [[ -e "$topconfigdir" && -r "$topconfigdir" && -d "$topconfigdir" ]] 
         then
-            getprefixnames  "$topconfigdir" "$1"
+            doit='true'
+            # shopt -s nullglob
+            # shopt -s dotglob
+            # chk_files=("$topconfigdir/*")
+            # (( ${#chk_files[*]} != 0 )) && doit='true'
+            # shopt -u nullglob
+            # shopt -u dotglob
+            # echo $doit
+            if [[ "$doit" == 'true' ]]; then
+                #echo 'call getprefixnames'
+                getprefixnames "$topconfigdir" "$1"
+            fi 
         fi
     }
 
@@ -483,11 +493,11 @@ function processarguments(){
         getprefixInfo prefixs # get known prefixs
         prefix2delete="$1"
         defprefixpth="$(getdefaultprepath)"
+        echo '5'
         defprefix="$(basename -s .txt "$defprefixpth")" # get default prefix
         if [[ $defprefix == "$prefix2delete" ]]; then    # cannot delete default prefix
             printf "\nCannot delete default prefix %s." "$defprefix"
             listPrefixInfo
-            exit 0
         fi 
         target="not"
         for prefix in "${prefixs[@]}"; do # try to find requested prefix in known list
@@ -496,11 +506,13 @@ function processarguments(){
                 break
             fi
         done   
+        echo 'h0'
         if [[ $target == 'not' ]]; then # not found, print list, end
             echo "Supplied prefix: '$prefix2delete' not found -- exiting"
             listPrefixInfo
-            exit 0
+
         fi
+        echo 'h1'
         config2delete="$( find "$topconfigdir" -maxdepth 1 -type f -regex ".*$target.txt"  )"  
         datadir2delete="$(gettopdatadir)/$target.d"
         [[ -e "$config2delete" && -r "$config2delete" && -f "$config2delete" ]] || config2delete='' 
@@ -535,7 +547,6 @@ function processarguments(){
     }
 
     function persistthisreading(){
-        echo '************* -p not yet implemented ******'
         options+=([persist]=true)
     }
 
@@ -677,14 +688,17 @@ if ((mypths[firsttime]))
 then
         echo 'first time initialization'
         initializePramsFromNothing
+
 else
         setupPaths1
+
 fi
 # setupPaths
 # ((mypths[firsttime])) && initializePramsFromNothing #|| notfirsttime
 
 topargs=$*
 processarguments "$topargs"
+
 
 # if amIdebugging; then
 #     printOptions
@@ -715,7 +729,7 @@ function canIdeletefiles(){
     '
     local maxfile="${dict['maxfiles2keep']}"
     #echo "$maxfile"
-    if [[ "$maxfile" == -1 ]]; then
+    if [[ "$maxfile" == -1 || "${dict[saveiaf]:-false}" == true ]]; then
         #echo "keep all files"
         return 1
     else
@@ -729,6 +743,7 @@ keyexists 'regex' && dict+=([searchstring]=${options[regex]})
 keyexists 'num2save' && dict+=([maxfiles2keep]=${options[num2save]})
 keyexists 'onetimeprefix' && dict+=([deffilepre]=${options[onetimeprefix]})
 keyexists 'persist' && dict+=([persist]=${options[persist]})
+keyexists 'saveiaf'  && dict+=([saveiaf]=${options[saveiaf]})
 
 if amIdebugging; then
     printdict
@@ -773,11 +788,15 @@ cd Coordinations/ || exit 60  # do need data in Coordinations
 '
 if  grep -i "${dict['searchstring']}" Published > tempfile.tmp 
 then 
+    vid="$VERSION"
+    [[ "${dict[persist]}" == true ]] && vid="$vid-Persist"
+    #echo "$vid"
     printf "\nMatches found for %s\n" "${dict['searchstring']}"
     sed 's#</td><td#</td>\n<td#g' < tempfile.tmp | \
     sed 's#</tr>#\n</tr>\n<tr>#' | \
-    sed '1 i v1.0.1<tr>' \
+    sed '1 i '"$vid<tr>" \
     > "$outfilename"
+    
     rm tempfile.tmp
 else
     printf "\nNo Matches found for %s, nothing done.\n" "${dict['searchstring']}"
@@ -802,10 +821,10 @@ then
     rm Published   # if the most current file is the one we expect, delete Published
     shopt -s nullglob
     numfiles=(*)
-    numfiles=${#numfiles[@]}
+    numfilesl=${#numfiles[@]}
     shopt -u nullglob
     
-    if [[ $numfiles -gt 1 ]]
+    if [[ $numfilesl -gt 1 ]]
     then
         : '
         check if there was a change between the last file and the current file
@@ -831,8 +850,10 @@ fi
 
 reversesortfiles "$arg"  # do it again as one file may have been deleated
 
+
+
 if canIdeletefiles; then
-    printdatedfiles "purging adjacent duplicates from history of changes "
+    printdatedfiles "files in history of changes "
     len=${#rsdatedfiles[@]}
     declare -a toB_deleated
     toB_deleated=()

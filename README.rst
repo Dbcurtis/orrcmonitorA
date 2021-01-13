@@ -138,6 +138,19 @@ Testing process from the start:
 #. verify that test_check4noinit.py passes.
 
 
+Problems
+==========
+
+-up switch combo crashs and that is because u takes a parameeter and it aint p.
+probably a documentation fix.
+
+Currently puting a junk.txt file in the config direcory.  It is not seen by -l, but it is not 
+pretty.  Easy work around of a bug I do not want to take the time to fix.
+
+to find persistent readings, do  grep -r -n -i --include="*.txt" Persist .
+
+
+
 
 
 How do I make the html for this ``.rst`` file?

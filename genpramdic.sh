@@ -3,7 +3,6 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-
 #this function has not been tested
 printarr() { declare -n __p="$1"; for k in "${!__p[@]}"; do printf "%s=%s\n" "$k" "${__p[$k]}" ; done ;  }  
 
@@ -59,6 +58,7 @@ gen_pram_dict(){
             vala="${temp[1]}"
             dict["$keya"]="$vala"
         done
+        dict+=([persist]=false)
         IFS=$priorIFS
     }
 

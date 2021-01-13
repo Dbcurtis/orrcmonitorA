@@ -151,7 +151,7 @@ class PsudoMain:
     """
     # if operating in windows 10 your datadir is at something like:
     # \\wsl$\Ubuntu-20.04\home\dbcurtis\.local\share\orrccheck\www.orrc.org\Coordinations
-    # if running in wsl, access is ~/.local\share\orrccheck\www.orrc.org\Coordinations
+    # if running in wsl, access is ~/.local\share\prefix.d\orrccheck\www.orrc.org\Coordinations
 
     def _getConfiguration(self) -> Dict[str, Any]:
         configP: Path = Path.home() / '.config' / 'orrccheck.d' / 'lastusedpre.txt'
