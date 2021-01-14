@@ -11,7 +11,7 @@ coordination holder, contact, or sponser
 changes.  It executes on a Linux system using bash and python 3.8 and above.
 
 The problem
-___________
+____________
 The ORRC.org website ("http://www.orrc.org/") publicly provides coordination 
 information about repeaters in Oregon.
 While the public may read what coordination exist, 
@@ -23,40 +23,42 @@ Sometimes there appear to be changes that just happen without
 the coordination holders or contacts knowing about it.
 
 Approach
-________
+_________
 
 This project:
   
   1) periodically scrapes the ORRC website to extract 
-      specific published coordination records
+     specific published coordination records
 
   2) compares the contents of the extracted records 
-      with prior records
+     with prior records
 
   3) if a change will send an email to specified addresses
+     (not yet implemented)
 
-  4) provides a tab delmited file for ** to be **
+  4) provides a tab delmited file for ** TODO **
 
 Programming tool use
---------------------
-This project was written using a Windows 10 computer with WSL***.  
+---------------------
+
+This project was written using a Windows 10 computer with WSL2.  
 Most of the original Python programming and testing 
 was done using Visual Studio Code in the Windows envrionment.
 
 The initial bash shell coding and debugging was done using 
 Visual Studio Code, and tested on the 14.??? LTS ubuntu installed
-in WSL*** 2.  This was my first bash coding project and it shows.
+in WSL2.  This was my first bash coding project and it shows.
 
 **Not all of this is implemented Yet**
+**current issues with translatin of end of line between windows and linux**
 
 Command line options and parameters
 .. code-block::
-
-  [path]/orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix -z prefix
+[path]/orrccheck.sh -h -l -s -d -x -p -u prefix -c prefix -z prefix
 
     ===== ============= =================================================
     opt    Argument          Description
-    ===== ============= =================================================
+    ===== ============= ================================================= 
     -h                   print this
     -l                   list existing prefixes
     -s                   do not delete any files implies -d
@@ -127,7 +129,7 @@ First Time Configuration
 3. aaa
 
 .. code-block:: 
-
+    
     {
     "name": "Python: Current File",
     "type": "python",
@@ -190,6 +192,6 @@ Need to automatically send an email when the current and last reading differ.
 
 How do I make the html for this ``.rst`` file?
 ==============================================
-run ``makehtml.py``
+In a bash shell input the command: ``.\makehtml.py``
 
 It will generate the html in the same directory as the ``.rst`` file.

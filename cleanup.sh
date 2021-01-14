@@ -1,4 +1,9 @@
 #!/usr/bin/bash
+
+: '
+    resets the orrccheck.sh directory structure
+    so after this need to follow the setup instructions
+'
 cd 
 cd .config
 ls
